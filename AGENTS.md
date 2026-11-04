@@ -4,7 +4,7 @@ Read this file first. It tells you how this project is built and how to change i
 
 ## What this is
 
-**Folio Studio** is a browser app for creating premium digital products to sell
+**Viralize Studio** is a browser app for creating premium digital products to sell
 (ebooks, workbooks, planners, checklists). The user edits content on the left,
 sees real pages on the right, and exports a print-ready PDF.
 
@@ -86,3 +86,8 @@ examples, short confident sentences, a clear promise, and something the buyer
 
 Open `index.html` in a browser. Check: no console errors, the preview updates as you
 type, Export PDF shows clean pages, and dark mode still looks right.
+
+## Naming note
+The product name is **Viralize Studio**. In code, everything lives under the global
+`window.Folio` namespace and projects are saved under the `folio.v1` storage key
+(the app's original working name). Keep those names so saved projects keep working.

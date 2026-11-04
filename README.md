@@ -1,4 +1,4 @@
-# Folio Studio
+# Viralize Studio
 
 Create premium digital products — ebooks, workbooks, planners, checklists and day-trading guides — and
 export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your own site.
@@ -24,7 +24,7 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 No install needed. Download the repo and double-click `index.html`.
 
 Or turn on **GitHub Pages** (Settings → Pages → Source: *GitHub Actions*). The included
-workflow publishes the app at `https://<your-username>.github.io/folio-studio/`.
+workflow publishes the app at `https://<your-username>.github.io/viralize-studio/`.
 
 ## Export a high-quality PDF
 
