@@ -193,6 +193,28 @@
 .journal-foot div { border: 1px solid var(--p-rule); border-radius: 6px; height: .6in; padding: 6px 8px; }
 .journal-foot span { font: 600 7pt/1 var(--p-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--p-muted); }
 
+
+/* Theme options: extended / uppercase display type (e.g. the Viralize theme). */
+.page h1, .page h2, .page h3, .cover-title, .toc-t, .chart-title, .pattern-head strong {
+  font-stretch: var(--p-display-stretch) !important; text-transform: var(--p-display-case);
+}
+.cover-title { line-height: 1 !important; }
+
+/* Glow cover */
+.cover--glow {
+  background:
+    radial-gradient(34% 26% at 36% 46%, var(--p-glow-a), transparent 72%),
+    radial-gradient(34% 26% at 64% 52%, var(--p-glow-b), transparent 72%),
+    var(--p-paper);
+}
+.cover--glow .cover-inner { text-align: center; }
+.cover--glow .cover-top { color: var(--p-ink); letter-spacing: .34em; font-family: var(--p-mono); font-weight: 500; }
+.cover--glow .cover-mid { align-items: center; }
+.cover--glow .cover-title { font-weight: 900 !important; font-size: 46pt !important; letter-spacing: -.01em; }
+.cover--glow .cover-sub { font: 500 9pt/1.6 var(--p-mono); letter-spacing: .22em; text-transform: uppercase; opacity: .85; max-width: 34em; }
+.cover--glow .cover-bottom { justify-content: center; gap: 28px; font-family: var(--p-mono); }
+.cover--glow .cover-inner::after { content: ''; display: block; height: 1px; margin-top: 18px; background: linear-gradient(90deg, #9CC3FF, #C9B4F5 50%, #F5A6CF); order: 3; }
+
 /* ---------- Print / PDF ---------- */
 @media print {
   @page { margin: 0; }

@@ -4,11 +4,30 @@
  * To add a theme: copy one entry, give it a new key, change the values.
  * Fonts must also be added to the Google Fonts <link> in index.html.
  * Every value here becomes a CSS variable on the product (see render.js).
- * Optional: up / down (candle colors) and mono (chart labels) — defaults apply if left out.
+ * Optional: up / down (candle colors), mono (chart labels), displayStretch ('125%' = extended),
+ * displayCase ('uppercase'), glowA / glowB (glow cover colors) — defaults apply if left out.
  */
 window.Folio = window.Folio || {};
 
 Folio.themes = {
+  viralize: {
+    name: 'Viralize',
+    note: 'House style: extended black caps, blue-pink glow.',
+    display: "'Archivo', 'Arial Black', Arial, sans-serif",
+    displayStretch: '125%',
+    displayCase: 'uppercase',
+    body: "'Instrument Sans', 'Helvetica Neue', Arial, sans-serif",
+    mono: "'IBM Plex Mono', ui-monospace, Menlo, monospace",
+    paper: '#FCFCFE',
+    ink: '#0A0A0B',
+    muted: '#66667A',
+    rule: '#E8E6EF',
+    accent: '#7D7FE8',
+    glowA: '#D3E3FF',
+    glowB: '#FCD8EA',
+    coverBg: '#FCFCFE',
+    coverInk: '#0A0A0B'
+  },
   editorial: {
     name: 'Editorial',
     note: 'Literary serif, warm paper. Ebooks and guides.',
@@ -112,7 +131,8 @@ Folio.themes = {
 Folio.coverStyles = {
   classic: 'Classic — centered title on paper',
   full: 'Full bleed — solid color cover',
-  frame: 'Framed — fine border, editorial'
+  frame: 'Framed — fine border, editorial',
+  glow: 'Glow — soft blue and pink light behind the title'
 };
 
 /* Paper sizes used for the preview and for PDF export. */

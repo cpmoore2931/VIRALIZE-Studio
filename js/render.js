@@ -19,6 +19,9 @@ Folio.themeVars = function (p) {
     `--p-cover-ink:${t.coverInk}`,
     `--p-up:${t.up || '#1E9E6A'}`, `--p-down:${t.down || '#D9483B'}`,
     `--p-mono:${t.mono || "'IBM Plex Mono', ui-monospace, Menlo, monospace"}`,
+    `--p-display-stretch:${t.displayStretch || '100%'}`, `--p-display-case:${t.displayCase || 'none'}`,
+    `--p-glow-a:${t.glowA || 'color-mix(in srgb, ' + accent + ' 22%, transparent)'}`,
+    `--p-glow-b:${t.glowB || 'color-mix(in srgb, ' + accent + ' 12%, transparent)'}`,
     `--page-w:${size.w}`, `--page-h:${size.h}`
   ].join(';');
 };
