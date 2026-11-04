@@ -1,0 +1,546 @@
+/*
+ * APP — editor UI, saving, modals, export.
+ *
+ * Data flow:  state.product  →  Folio.render()  →  preview
+ *             editor inputs  →  update state.product  →  save + re-render preview
+ * Projects are saved in the browser (localStorage key "folio.v1").
+ */
+(function () {
+  const { esc, uid, list } = Folio.util;
+  const $ = (s, r = document) => r.querySelector(s);
+  const STORE_KEY = 'folio.v1';
+
+  const state = {
+    store: { projects: {}, current: null },
+    tab: 'design',
+    openBlocks: new Set()
+  };
+  const P = () => state.store.projects[state.store.current];
+
+  /* ---------- storage ---------- */
+  function readStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.projects && s.projects[s.current]) return s;
+      }
+    } catch (e) { /* storage blocked: start fresh */ }
+    return null;
+  }
+  let saveTimer;
+  function save() {
+    P().updated = Date.now();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state.store)); } catch (e) { /* ignore */ }
+    }, 250);
+  }
+
+  function normalize(p) {
+    const tpl = Folio.templates.find(t => t.key === 'blank').product;
+    const out = Object.assign({}, JSON.parse(JSON.stringify(tpl)), p);
+    out.listing = Object.assign({}, tpl.listing, p.listing || {});
+    out.blocks = (Array.isArray(p.blocks) ? p.blocks : []).filter(b => b && Folio.blocks[b.type])
+      .map(b => Object.assign({}, Folio.blocks[b.type].defaults, b, { id: b.id || uid() }));
+    if (!Folio.themes[out.theme]) out.theme = 'editorial';
+    if (!Folio.coverStyles[out.cover]) out.cover = 'classic';
+    if (!Folio.paperSizes[out.paper]) out.paper = 'letter';
+    out.id = out.id || uid();
+    return out;
+  }
+
+  function addProject(p) {
+    const prod = normalize(Object.assign({}, p, { id: uid(), created: Date.now() }));
+    state.store.projects[prod.id] = prod;
+    state.store.current = prod.id;
+    state.openBlocks.clear();
+    save();
+    refreshAll();
+  }
+
+  /* ---------- preview ---------- */
+  let previewTimer;
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(renderPreview, 120);
+  }
+  function renderPreview() {
+    const p = P();
+    $('#stageInner').innerHTML = `<div class="doc" id="doc" style="${Folio.themeVars(p)}">${Folio.render(p)}</div>`;
+    fitPreview();
+    $('#projectName').textContent = p.title || 'Untitled product';
+    updateScore();
+  }
+  function fitPreview() {
+    const doc = $('#doc');
+    if (!doc) return;
+    const pageW = P().paper === 'a4' ? 794 : 816;
+    const avail = $('#stage').clientWidth - 48;
+    doc.style.zoom = Math.min(1, Math.max(0.3, avail / pageW)).toFixed(3);
+  }
+  function updateScore() {
+    const q = Folio.quality(P());
+    const pill = $('#scorePill');
+    pill.textContent = q.score;
+    pill.dataset.level = q.score >= 85 ? 'good' : q.score >= 60 ? 'ok' : 'low';
+    if (state.tab === 'quality' || state.tab === 'sell') {
+      const keepFocus = document.activeElement && $('#panelBody').contains(document.activeElement);
+      if (!keepFocus) renderPanel();
+      else if (state.tab === 'sell') { const o = $('#listingOut'); if (o) o.textContent = listingText(P()); }
+    }
+  }
+
+  /* ---------- form helpers ---------- */
+  function field(f, value, path) {
+    const id = `f-${path}`;
+    let input;
+    if (f.kind === 'textarea' || f.kind === 'list') {
+      const v = f.kind === 'list' ? list(value).join('\n') : (value || '');
+      input = `<textarea id="${id}" data-path="${path}" data-kind="${f.kind}" rows="${f.kind === 'list' ? 5 : 4}">${esc(v)}</textarea>`;
+    } else if (f.kind === 'select') {
+      input = `<select id="${id}" data-path="${path}">${Object.entries(f.options).map(([k, l]) =>
+        `<option value="${k}"${k === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    } else if (f.kind === 'checkbox') {
+      return `<label class="check" for="${id}"><input type="checkbox" id="${id}" data-path="${path}" data-kind="checkbox"${value ? ' checked' : ''}> ${esc(f.label)}</label>`;
+    } else {
+      input = `<input id="${id}" type="${f.kind === 'number' ? 'number' : 'text'}" data-path="${path}" value="${esc(value == null ? '' : value)}">`;
+    }
+    return `<label class="field" for="${id}"><span>${esc(f.label)}</span>${input}</label>`;
+  }
+
+  function setPath(path, raw, kind) {
+    const p = P();
+    const parts = path.split('.');
+    let obj = p;
+    if (parts[0] === 'b') {
+      obj = p.blocks.find(b => b.id === parts[1]);
+      parts.splice(0, 2);
+    }
+    while (parts.length > 1) obj = obj[parts.shift()];
+    const key = parts[0];
+    obj[key] = kind === 'list' ? list(raw) : kind === 'checkbox' ? raw : raw;
+  }
+
+  /* ---------- panel tabs ---------- */
+  function renderPanel() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === state.tab));
+    const body = $('#panelBody');
+    body.innerHTML = ({ design: designTab, content: contentTab, sell: sellTab, quality: qualityTab })[state.tab]();
+  }
+
+  function designTab() {
+    const p = P();
+    const themes = Object.entries(Folio.themes).map(([k, t]) => `
+      <button type="button" class="theme-card${p.theme === k ? ' on' : ''}" data-theme-key="${k}">
+        <span class="swatch" style="background:${t.coverBg};color:${t.coverInk};font-family:${t.display}">Aa</span>
+        <span class="theme-meta"><strong>${esc(t.name)}</strong><small>${esc(t.note)}</small></span>
+        <span class="dot" style="background:${t.accent}"></span>
+      </button>`).join('');
+    const theme = Folio.themes[p.theme];
+    return `
+      <section class="group">
+        <h3 class="group-title">Product</h3>
+        ${field({ label: 'Product type (shown on cover)', kind: 'text' }, p.kind, 'kind')}
+        ${field({ label: 'Title', kind: 'text' }, p.title, 'title')}
+        ${field({ label: 'Subtitle / promise', kind: 'textarea' }, p.subtitle, 'subtitle')}
+        <div class="row2">
+          ${field({ label: 'Author', kind: 'text' }, p.author, 'author')}
+          ${field({ label: 'Brand / shop', kind: 'text' }, p.brand, 'brand')}
+        </div>
+        ${field({ label: 'Year', kind: 'text' }, p.year, 'year')}
+      </section>
+      <section class="group">
+        <h3 class="group-title">Look</h3>
+        <div class="theme-list">${themes}</div>
+        <div class="row2">
+          <label class="field" for="f-accent"><span>Accent color</span>
+            <span class="color-row"><input type="color" id="f-accent" data-path="accent" value="${esc(p.accent || theme.accent)}">
+            <button type="button" class="btn ghost small" id="resetAccent">Theme default</button></span></label>
+          ${field({ label: 'Cover', kind: 'select', options: Folio.coverStyles }, p.cover, 'cover')}
+        </div>
+        ${field({ label: 'Paper size', kind: 'select', options: Object.fromEntries(Object.entries(Folio.paperSizes).map(([k, v]) => [k, v.name])) }, p.paper, 'paper')}
+        ${field({ label: 'Include table of contents', kind: 'checkbox' }, p.toc !== false, 'toc')}
+      </section>`;
+  }
+
+  function contentTab() {
+    const p = P();
+    const cards = p.blocks.map((b, i) => {
+      const def = Folio.blocks[b.type];
+      const open = state.openBlocks.has(b.id);
+      return `<div class="bcard${open ? ' open' : ''}${b.type === 'chapter' ? ' is-chapter' : ''}" data-bid="${b.id}">
+        <div class="bcard-head">
+          <button type="button" class="bcard-toggle" data-act="toggle" aria-expanded="${open}">
+            <span class="btype">${esc(def.label)}</span>
+            <span class="bsum">${esc(def.summary(b) || '')}</span>
+          </button>
+          <span class="bcard-tools">
+            <button type="button" class="tool" data-act="up" aria-label="Move up"${i === 0 ? ' disabled' : ''}>↑</button>
+            <button type="button" class="tool" data-act="down" aria-label="Move down"${i === p.blocks.length - 1 ? ' disabled' : ''}>↓</button>
+          </span>
+        </div>
+        ${open ? `<div class="bcard-body">
+          ${def.fields.map(f => field(f, b[f.key], `b.${b.id}.${f.key}`)).join('') || '<p class="hint">No settings. This block starts a new page.</p>'}
+          <div class="bcard-actions">
+            <button type="button" class="btn ghost small" data-act="dup">Duplicate</button>
+            <button type="button" class="btn ghost small danger" data-act="del">Delete</button>
+          </div></div>` : ''}
+      </div>`;
+    }).join('');
+    const opts = Object.entries(Folio.blocks).map(([k, d]) => `<option value="${k}">${esc(d.label)}</option>`).join('');
+    return `
+      <p class="hint">Click any block in the preview to jump to it. Text supports **bold** and *italic*.</p>
+      <div class="blist">${cards || '<p class="empty">No blocks yet. Add your first chapter below.</p>'}</div>
+      <div class="add-row">
+        <select id="addType" aria-label="Block type">${opts}</select>
+        <button type="button" class="btn primary" id="addBlock">Add block</button>
+      </div>`;
+  }
+
+  function listingText(p) {
+    const L = p.listing || {};
+    const s = Folio.stats(p);
+    const chapters = p.blocks.filter(b => b.type === 'chapter').map(b => `• ${b.title}`);
+    const count = t => p.blocks.filter(b => b.type === t).length;
+    const extras = [
+      count('checklist') && `${count('checklist')} checklist${count('checklist') > 1 ? 's' : ''}`,
+      count('prompts') && `${count('prompts')} guided worksheet${count('prompts') > 1 ? 's' : ''}`,
+      count('weekly') && `${count('weekly')} weekly planner spread${count('weekly') > 1 ? 's' : ''}`,
+      count('habit') && 'a monthly habit tracker',
+      count('table') && `${count('table')} reference table${count('table') > 1 ? 's' : ''}`,
+      count('notes') && `${count('notes')} notes page${count('notes') > 1 ? 's' : ''}`
+    ].filter(Boolean);
+    const paper = Folio.paperSizes[p.paper].name.split(' (')[0];
+    const price = String(L.price || '').trim();
+    return [
+      `${p.title}${p.subtitle ? ` — ${p.subtitle}` : ''}`,
+      '',
+      L.promise || '',
+      '',
+      L.audience ? `Made for ${L.audience}.` : '',
+      '',
+      chapters.length ? 'WHAT\'S INSIDE' : '',
+      ...chapters,
+      extras.length ? `Plus ${extras.join(', ')}.` : '',
+      '',
+      'THE DETAILS',
+      `• ${s.pages}-page printable PDF (${paper})`,
+      '• Instant download, print at home or use on a tablet',
+      p.author ? `• Created by ${p.author}${p.brand ? `, ${p.brand}` : ''}` : '',
+      '',
+      price ? (Number(price) === 0 ? 'Free download.' : `Price: $${price}`) : ''
+    ].filter((l, i, a) => l !== '' || (a[i - 1] !== '' && i > 0)).join('\n').trim();
+  }
+
+  function sellTab() {
+    const p = P();
+    const L = p.listing;
+    return `
+      <section class="group">
+        <h3 class="group-title">Listing details</h3>
+        <div class="row2">
+          ${field({ label: 'Price (USD)', kind: 'text' }, L.price, 'listing.price')}
+          ${field({ label: 'Where you sell', kind: 'text' }, L.platform, 'listing.platform')}
+        </div>
+        ${field({ label: 'Who it is for', kind: 'text' }, L.audience, 'listing.audience')}
+        ${field({ label: 'One-sentence promise', kind: 'textarea' }, L.promise, 'listing.promise')}
+      </section>
+      <section class="group">
+        <div class="group-head"><h3 class="group-title">Listing copy</h3>
+          <button type="button" class="btn small" id="copyListing">Copy</button></div>
+        <pre class="listing" id="listingOut">${esc(listingText(p))}</pre>
+        <p class="hint">Paste into Gumroad, Etsy, Payhip, Stan or your own site. Updates as you edit.</p>
+      </section>`;
+  }
+
+  function qualityTab() {
+    const q = Folio.quality(P());
+    const level = q.score >= 85 ? 'Ready to sell' : q.score >= 60 ? 'Almost there' : 'Needs work';
+    return `
+      <section class="group quality-head">
+        <div class="big-score" data-level="${q.score >= 85 ? 'good' : q.score >= 60 ? 'ok' : 'low'}">${q.score}</div>
+        <div><strong>${level}</strong><p class="hint">${q.stats.pages} page${q.stats.pages === 1 ? "" : "s"} · ${q.stats.chapters} chapter${q.stats.chapters === 1 ? "" : "s"} · ${q.stats.actionable} interactive section${q.stats.actionable === 1 ? "" : "s"}</p></div>
+      </section>
+      <ul class="checks">${q.checks.map(c => `<li class="${c.ok ? 'ok' : 'no'}">
+        <span class="mark" aria-hidden="true">${c.ok ? '✓' : '!'}</span>
+        <span><strong>${esc(c.label)}</strong>${c.ok ? '' : `<small>${esc(c.tip)}</small>`}</span></li>`).join('')}</ul>`;
+  }
+
+  /* ---------- panel events ---------- */
+  function onPanelInput(e) {
+    const el = e.target;
+    if (!el.dataset.path) return;
+    const kind = el.dataset.kind;
+    setPath(el.dataset.path, kind === 'checkbox' ? el.checked : el.value, kind);
+    save();
+    schedulePreview();
+    const card = el.closest('.bcard');
+    if (card) {
+      const b = P().blocks.find(x => x.id === card.dataset.bid);
+      card.querySelector('.bsum').textContent = Folio.blocks[b.type].summary(b) || '';
+    }
+  }
+
+  function onPanelClick(e) {
+    const p = P();
+    const themeBtn = e.target.closest('[data-theme-key]');
+    if (themeBtn) { p.theme = themeBtn.dataset.themeKey; p.accent = ''; save(); renderPanel(); renderPreview(); return; }
+    if (e.target.id === 'resetAccent') { p.accent = ''; save(); renderPanel(); renderPreview(); return; }
+    if (e.target.id === 'addBlock') {
+      const type = $('#addType').value;
+      const b = Object.assign({ type, id: uid() }, JSON.parse(JSON.stringify(Folio.blocks[type].defaults)));
+      p.blocks.push(b);
+      state.openBlocks.add(b.id);
+      save(); renderPanel(); renderPreview();
+      const card = document.querySelector(`[data-bid="${b.id}"]`);
+      if (card) card.scrollIntoView({ block: 'center' });
+      return;
+    }
+    if (e.target.id === 'copyListing') { copy(listingText(p), 'Listing copied'); return; }
+
+    const actBtn = e.target.closest('[data-act]');
+    const card = e.target.closest('.bcard');
+    if (!actBtn || !card) return;
+    const id = card.dataset.bid;
+    const i = p.blocks.findIndex(b => b.id === id);
+    const act = actBtn.dataset.act;
+    if (act === 'toggle') { state.openBlocks.has(id) ? state.openBlocks.delete(id) : state.openBlocks.add(id); renderPanel(); return; }
+    if (act === 'up' && i > 0) [p.blocks[i - 1], p.blocks[i]] = [p.blocks[i], p.blocks[i - 1]];
+    if (act === 'down' && i < p.blocks.length - 1) [p.blocks[i + 1], p.blocks[i]] = [p.blocks[i], p.blocks[i + 1]];
+    if (act === 'dup') {
+      const copyB = Object.assign(JSON.parse(JSON.stringify(p.blocks[i])), { id: uid() });
+      p.blocks.splice(i + 1, 0, copyB); state.openBlocks.add(copyB.id);
+    }
+    if (act === 'del') {
+      if (actBtn.dataset.confirm !== '1') { actBtn.dataset.confirm = '1'; actBtn.textContent = 'Click again to delete'; return; }
+      p.blocks.splice(i, 1);
+    }
+    save(); renderPanel(); renderPreview();
+  }
+
+  /* ---------- modals ---------- */
+  function openModal(title, html, onReady) {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = html;
+    $('#modal').hidden = false;
+    if (onReady) onReady($('#modalBody'));
+  }
+  function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; }
+
+  function newModal() {
+    openModal('Start a new product', `<div class="tpl-grid">${Folio.templates.map(t => {
+      const th = Folio.themes[t.product.theme];
+      return `<button type="button" class="tpl" data-tpl="${t.key}">
+        <span class="tpl-cover" style="background:${th.coverBg};color:${th.coverInk};font-family:${th.display}">${esc(t.product.title)}</span>
+        <strong>${esc(t.product.kind)}</strong><small>${esc(t.blurb)}</small></button>`;
+    }).join('')}</div>`, body => {
+      body.addEventListener('click', e => {
+        const b = e.target.closest('[data-tpl]');
+        if (!b) return;
+        addProject(JSON.parse(JSON.stringify(Folio.templates.find(t => t.key === b.dataset.tpl).product)));
+        closeModal(); toast('New product created');
+      });
+    });
+  }
+
+  function projectsModal() {
+    const rows = Object.values(state.store.projects).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    openModal('Your products', `
+      <ul class="proj-list">${rows.map(r => `<li data-pid="${r.id}" class="${r.id === state.store.current ? 'current' : ''}">
+        <span class="proj-meta"><strong>${esc(r.title || 'Untitled')}</strong>
+        <small>${esc(r.kind || '')} · ${esc(Folio.themes[r.theme].name)} · edited ${new Date(r.updated || Date.now()).toLocaleDateString()}</small></span>
+        <span class="proj-actions">
+          <button type="button" class="btn small" data-pact="open">Open</button>
+          <button type="button" class="btn ghost small" data-pact="dup">Duplicate</button>
+          <button type="button" class="btn ghost small danger" data-pact="del"${rows.length < 2 ? ' disabled' : ''}>Delete</button>
+        </span></li>`).join('')}</ul>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="dlJson">Download .json backup</button>
+        <label class="btn ghost file-btn">Import .json file<input type="file" id="importFile" accept=".json,application/json"></label>
+      </div>
+      <p class="hint">Products are saved automatically in this browser. Download a backup to move them to another device.</p>`, body => {
+      body.addEventListener('click', e => {
+        const btn = e.target.closest('[data-pact]');
+        if (btn) {
+          const id = btn.closest('li').dataset.pid;
+          const act = btn.dataset.pact;
+          if (act === 'open') { state.store.current = id; state.openBlocks.clear(); save(); refreshAll(); closeModal(); }
+          if (act === 'dup') { const c = JSON.parse(JSON.stringify(state.store.projects[id])); c.title += ' (copy)'; addProject(c); closeModal(); toast('Duplicated'); }
+          if (act === 'del') {
+            if (btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Confirm delete'; return; }
+            delete state.store.projects[id];
+            if (state.store.current === id) state.store.current = Object.keys(state.store.projects)[0];
+            save(); refreshAll(); projectsModal(); toast('Deleted');
+          }
+        }
+        if (e.target.id === 'dlJson') download(`${slug(P().title)}.json`, JSON.stringify(P(), null, 2));
+      });
+      $('#importFile', body).addEventListener('change', e => {
+        const f = e.target.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => { if (applyJson(r.result, true)) closeModal(); };
+        r.readAsText(f);
+      });
+    });
+  }
+
+  function aiPrompt(p) {
+    const blockDocs = Object.entries(Folio.blocks).map(([k, d]) =>
+      `- "${k}" (${d.label}): ${d.fields.map(f => `${f.key}${f.kind === 'list' ? ' (array of strings)' : f.kind === 'number' ? ' (number)' : f.kind === 'select' ? ` (one of: ${Object.keys(f.options).join(', ')})` : ''}`).join(', ') || 'no fields'}`).join('\n');
+    const clean = JSON.parse(JSON.stringify(p));
+    delete clean.created; delete clean.updated;
+    return `You are an expert digital product creator and editor. Improve the product below so it feels premium and worth paying for: specific, practical, well-structured, warm and confident. Keep the same JSON shape.
+
+RULES
+- Reply with ONLY the complete JSON object, no commentary, no code fences.
+- Keep "id" values that exist. New blocks may omit "id".
+- Use only these block types and fields:
+${blockDocs}
+- Text fields support **bold** and *italic*. In "text" and "intro", a blank line starts a new paragraph.
+- Themes: ${Object.keys(Folio.themes).join(', ')}. Covers: ${Object.keys(Folio.coverStyles).join(', ')}. Paper: ${Object.keys(Folio.paperSizes).join(', ')}.
+- No placeholder text (no "lorem ipsum", "TODO", "Your Name" unless I left it).
+
+MY REQUEST
+[Describe what you want changed, e.g. "Add two more chapters with worksheets" or "Rewrite in a friendlier voice".]
+
+PRODUCT JSON
+${JSON.stringify(clean, null, 2)}`;
+  }
+
+  function aiModal() {
+    openModal('Edit with ChatGPT, Grok or any AI', `
+      <ol class="steps">
+        <li><strong>Copy the prompt.</strong> It includes your whole product and the rules the AI must follow.</li>
+        <li><strong>Paste it into ChatGPT, Grok, Claude or Gemini.</strong> Replace the line under MY REQUEST with what you want.</li>
+        <li><strong>Paste the AI's reply below</strong> and apply it. Your current version is kept as a copy first.</li>
+      </ol>
+      <div class="ai-cols">
+        <div><div class="group-head"><span class="label">Prompt</span><button type="button" class="btn small primary" id="copyPrompt">Copy prompt</button></div>
+        <textarea id="aiPromptText" readonly rows="10">${esc(aiPrompt(P()))}</textarea></div>
+        <div><div class="group-head"><span class="label">AI reply (JSON)</span><button type="button" class="btn small primary" id="applyAI">Apply changes</button></div>
+        <textarea id="aiReply" rows="10" placeholder='Paste the JSON here. It starts with { and ends with }'></textarea>
+        <p class="error" id="aiError" hidden></p></div>
+      </div>`, body => {
+      $('#copyPrompt', body).addEventListener('click', () => copy($('#aiPromptText').value, 'Prompt copied', $('#aiPromptText')));
+      $('#applyAI', body).addEventListener('click', () => {
+        const ok = applyJson($('#aiReply').value, false);
+        if (ok) closeModal();
+      });
+    });
+  }
+
+  /* Accepts a reply that may be wrapped in ``` fences or have text around it. */
+  function applyJson(text, asNew) {
+    const err = $('#aiError');
+    try {
+      const s = String(text);
+      const start = s.indexOf('{'), end = s.lastIndexOf('}');
+      if (start < 0 || end < start) throw new Error('No JSON object found. Make sure you pasted the whole reply.');
+      const obj = JSON.parse(s.slice(start, end + 1));
+      if (!Array.isArray(obj.blocks)) throw new Error('The JSON has no "blocks" list. Ask the AI to return the complete product.');
+      const unknown = obj.blocks.filter(b => !Folio.blocks[b.type]).length;
+      if (asNew) { addProject(obj); }
+      else {
+        const backup = JSON.parse(JSON.stringify(P()));
+        backup.id = uid(); backup.title = `${backup.title} (before AI edit)`;
+        state.store.projects[backup.id] = backup;
+        const keepId = P().id;
+        const next = normalize(Object.assign({}, obj, { id: keepId, created: P().created }));
+        state.store.projects[keepId] = next;
+        save(); refreshAll();
+      }
+      toast(unknown ? `Applied. Skipped ${unknown} unknown block${unknown > 1 ? 's' : ''}.` : 'Changes applied');
+      return true;
+    } catch (e) {
+      const msg = e instanceof SyntaxError ? 'That is not valid JSON. Ask the AI to reply with only the JSON object.' : e.message;
+      if (err) { err.textContent = msg; err.hidden = false; } else toast(msg);
+      return false;
+    }
+  }
+
+  /* ---------- utilities ---------- */
+  function slug(s) { return String(s || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'product'; }
+  function download(name, text) {
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      toast('Download started');
+    } catch (e) { toast('Download blocked here. Use AI edit → Copy prompt to copy your JSON.'); }
+  }
+  function copy(text, msg, fallbackEl) {
+    const done = () => toast(msg);
+    try {
+      navigator.clipboard.writeText(text).then(done, () => { if (fallbackEl) { fallbackEl.select(); toast('Press Ctrl/Cmd + C to copy'); } });
+    } catch (e) { if (fallbackEl) fallbackEl.select(); }
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+
+  function exportPdf() {
+    const size = Folio.paperSizes[P().paper];
+    let s = $('#pageSizeStyle');
+    if (!s) { s = document.createElement('style'); s.id = 'pageSizeStyle'; document.head.appendChild(s); }
+    s.textContent = `@page { size: ${size.w} ${size.h}; margin: 0; }`;
+    toast('In the print dialog choose "Save as PDF", margins "None", and turn on "Background graphics".');
+    setTimeout(() => window.print(), 400);
+  }
+
+  function refreshAll() { renderPanel(); renderPreview(); }
+
+  /* ---------- boot ---------- */
+  function boot() {
+    const stored = readStore();
+    if (stored) {
+      state.store = stored;
+      Object.keys(stored.projects).forEach(k => { stored.projects[k] = normalize(stored.projects[k]); });
+    } else {
+      const first = normalize(JSON.parse(JSON.stringify(Folio.templates[0].product)));
+      state.store = { projects: { [first.id]: first }, current: first.id };
+    }
+
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { state.tab = t.dataset.tab; renderPanel(); }));
+    $('#panelBody').addEventListener('input', onPanelInput);
+    $('#panelBody').addEventListener('change', e => { if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') onPanelInput(e); });
+    $('#panelBody').addEventListener('click', onPanelClick);
+    $('#btnNew').addEventListener('click', newModal);
+    $('#btnProjects').addEventListener('click', projectsModal);
+    $('#btnAI').addEventListener('click', aiModal);
+    $('#btnPdf').addEventListener('click', exportPdf);
+    $('#modalClose').addEventListener('click', closeModal);
+    $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+    window.addEventListener('resize', fitPreview);
+
+    /* Click a block in the preview to edit it */
+    $('#stage').addEventListener('click', e => {
+      const blk = e.target.closest('[data-id]');
+      if (!blk || !blk.dataset.id) return;
+      state.tab = 'content'; state.openBlocks.add(blk.dataset.id);
+      renderPanel(); setMobile('edit');
+      const card = document.querySelector(`[data-bid="${blk.dataset.id}"]`);
+      if (card) { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); const f = card.querySelector('input,textarea'); if (f) f.focus({ preventScroll: true }); }
+    });
+
+    /* Phone: switch between editor and preview */
+    function setMobile(v) {
+      document.body.dataset.mobile = v;
+      $('#mEdit').classList.toggle('on', v === 'edit');
+      $('#mPreview').classList.toggle('on', v === 'preview');
+      if (v === 'preview') fitPreview();
+    }
+    $('#mEdit').addEventListener('click', () => setMobile('edit'));
+    $('#mPreview').addEventListener('click', () => setMobile('preview'));
+    setMobile('edit');
+
+    refreshAll();
+  }
+
+  boot();
+})();

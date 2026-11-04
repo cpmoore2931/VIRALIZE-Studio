@@ -1,0 +1,152 @@
+/*
+ * PRODUCT PAGES — how the digital product itself looks (preview + PDF).
+ * Colors and fonts come from theme variables (--p-*) set in js/render.js,
+ * so a theme change never needs CSS edits here.
+ */
+.doc {
+  display: flex; flex-direction: column; gap: 28px; align-items: center;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.page {
+  position: relative; width: var(--page-w); min-height: var(--page-h);
+  background: var(--p-paper); color: var(--p-ink);
+  font: 11.5pt/1.62 var(--p-body);
+  padding: 0.85in 0.95in 0.6in;
+  display: flex; flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 14px 40px rgba(0, 0, 0, .14);
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.page-body { flex: 1; display: flex; flex-direction: column; }
+.page.full { height: var(--page-h); overflow: hidden; }
+.page.full .page-body > * { flex: 1; display: flex; flex-direction: column; }
+.blk { cursor: pointer; border-radius: 4px; transition: box-shadow .15s; }
+.blk:hover { box-shadow: 0 0 0 6px color-mix(in srgb, var(--p-accent) 10%, transparent); }
+.blk + .blk { margin-top: 1.1em; }
+
+.folio {
+  display: flex; justify-content: space-between; padding-top: 14px; margin-top: 24px;
+  border-top: 1px solid var(--p-rule); color: var(--p-muted);
+  font: 8pt/1 var(--p-body); letter-spacing: .14em; text-transform: uppercase;
+}
+
+/* Type */
+.page h1, .page h2, .page h3 { font-family: var(--p-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.12; }
+.page p { margin: 0 0 .8em; }
+.page p:last-child { margin-bottom: 0; }
+.page strong { font-weight: 600; }
+.prose { max-width: 36em; }
+.h2 { font-size: 19pt; margin-top: .4em !important; }
+.h3 { font-size: 13.5pt; margin-bottom: .55em !important; }
+.page-title { font-size: 26pt; }
+
+/* Chapter opener */
+.chap { padding-top: .6in; margin-bottom: .2in; }
+.chap-kicker { font: 600 8.5pt/1 var(--p-body); letter-spacing: .2em; text-transform: uppercase; color: var(--p-accent); margin-bottom: 18px; }
+.chap-kicker span { opacity: .5; }
+.chap h1 { font-size: 36pt; letter-spacing: -.01em; }
+.chap-rule { width: 56px; height: 2px; background: var(--p-accent); margin: 24px 0 22px; }
+.lead { font-size: 13.5pt; line-height: 1.55; color: var(--p-muted); max-width: 30em; }
+
+/* Lists */
+.bullets ul { margin: 0; padding-left: 1.2em; }
+.bullets li { margin-bottom: .4em; padding-left: .2em; }
+.bullets li::marker { color: var(--p-accent); }
+.checklist ul { list-style: none; margin: 0; padding: 0; }
+.checklist li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--p-rule); break-inside: avoid; }
+.box { width: 14px; height: 14px; border: 1.5px solid var(--p-accent); border-radius: 3px; flex: none; margin-top: .3em; }
+
+/* Callout + quote */
+.callout { background: color-mix(in srgb, var(--p-accent) 7%, var(--p-paper)); border-radius: 6px; padding: 16px 20px; break-inside: avoid; }
+.callout-label { font: 600 8pt/1 var(--p-body); letter-spacing: .18em; text-transform: uppercase; color: var(--p-accent); margin-bottom: 8px; }
+.pull { margin: .4em 0; padding: .3in 0; border-top: 1px solid var(--p-rule); border-bottom: 1px solid var(--p-rule); break-inside: avoid; }
+.pull blockquote { margin: 0; font: italic 19pt/1.3 var(--p-display); text-wrap: balance; }
+.pull figcaption { margin-top: 12px; color: var(--p-muted); font-size: 9.5pt; letter-spacing: .08em; text-transform: uppercase; }
+.pull figcaption::before { content: '— '; }
+
+/* Worksheet */
+.prompt { margin-bottom: 18px; break-inside: avoid; }
+.prompt-q { display: flex; gap: 12px; font-weight: 500; margin-bottom: 4px !important; }
+.prompt-n { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--p-accent); color: var(--p-paper); font-size: 9pt; font-weight: 600; margin-top: .1em; }
+.lines { height: calc(var(--lines) * 0.36in); background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(0.36in - 1px), var(--p-rule) calc(0.36in - 1px), var(--p-rule) 0.36in); }
+
+/* Table */
+.tbl table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+.tbl th { text-align: left; font: 600 8pt/1.2 var(--p-body); text-transform: uppercase; letter-spacing: .12em; color: var(--p-accent); padding: 8px 10px 8px 0; border-bottom: 1.5px solid var(--p-ink); }
+.tbl td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--p-rule); vertical-align: top; height: 0.4in; }
+.tbl tr { break-inside: avoid; }
+
+/* Table of contents */
+.toc-list { list-style: none; padding: 0; margin: .5in 0 0; }
+.toc-list li { display: flex; gap: 20px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--p-rule); }
+.toc-n { font: 600 9pt/1 var(--p-body); color: var(--p-accent); letter-spacing: .1em; width: 26px; }
+.toc-t { flex: 1; font: 16pt/1.2 var(--p-display); }
+.toc-k { color: var(--p-muted); font-size: 9pt; text-transform: uppercase; letter-spacing: .1em; }
+
+/* Weekly planner */
+.weekly, .habit, .notes { gap: 18px; }
+.weekly-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding-bottom: 12px; border-bottom: 1.5px solid var(--p-ink); }
+.date-line { display: flex; gap: 8px; align-items: flex-end; color: var(--p-muted); font-size: 9pt; text-transform: uppercase; letter-spacing: .12em; }
+.date-line span { width: 1.6in; border-bottom: 1px solid var(--p-muted); }
+.weekly-grid { flex: 1; display: grid; grid-template-columns: 1fr 2.1in; gap: 20px; }
+.weekly-days { display: grid; grid-template-rows: repeat(7, 1fr); }
+.day { display: grid; grid-template-columns: 0.95in 1fr; border-bottom: 1px solid var(--p-rule); }
+.day-name { font: 600 8.5pt/1 var(--p-body); text-transform: uppercase; letter-spacing: .12em; color: var(--p-accent); padding-top: 10px; }
+.day-lines { background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(0.3in - 1px), color-mix(in srgb, var(--p-rule) 70%, transparent) calc(0.3in - 1px), color-mix(in srgb, var(--p-rule) 70%, transparent) 0.3in); }
+.weekly-side { display: flex; flex-direction: column; gap: 14px; }
+.side-box { flex: 1; background: color-mix(in srgb, var(--p-accent) 6%, var(--p-paper)); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; }
+.side-title { font: 600 8.5pt/1.2 var(--p-body); text-transform: uppercase; letter-spacing: .12em; color: var(--p-accent); margin-bottom: 6px; }
+.side-lines { flex: 1; background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(0.3in - 1px), var(--p-rule) calc(0.3in - 1px), var(--p-rule) 0.3in); }
+
+/* Habit tracker */
+.habit-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7pt; }
+.habit-grid th { font-weight: 600; color: var(--p-muted); padding: 4px 0; text-align: center; }
+.habit-grid th.habit-name, .habit-grid td.habit-name { width: 1.5in; text-align: left; font-size: 9pt; padding-right: 8px; color: var(--p-ink); }
+.habit-grid td { height: 0.42in; border: 1px solid var(--p-rule); }
+.habit-grid td.habit-name { border-left: 0; }
+
+/* Notes */
+.notes-area { flex: 1; border-radius: 4px; }
+.notes--lined { background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(0.33in - 1px), var(--p-rule) calc(0.33in - 1px), var(--p-rule) 0.33in); }
+.notes--dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--p-muted) 55%, transparent) 1px, transparent 1.3px); background-size: 0.2in 0.2in; }
+.notes--grid { background-image: linear-gradient(var(--p-rule) 1px, transparent 1px), linear-gradient(90deg, var(--p-rule) 1px, transparent 1px); background-size: 0.2in 0.2in; border: 1px solid var(--p-rule); }
+
+/* Covers */
+.cover { padding: 0; height: var(--page-h); overflow: hidden; }
+.cover-inner { flex: 1; display: flex; flex-direction: column; padding: 0.9in; }
+.cover-top { font: 600 9pt/1 var(--p-body); letter-spacing: .3em; text-transform: uppercase; color: var(--p-accent); }
+.cover-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.cover-title { font: 600 50pt/1.02 var(--p-display) !important; letter-spacing: -.015em; }
+.cover-sub { font-size: 14.5pt; line-height: 1.45; max-width: 26em; opacity: .8; margin: 0 !important; }
+.cover-bottom { display: flex; justify-content: space-between; gap: 20px; font: 500 9pt/1.3 var(--p-body); letter-spacing: .16em; text-transform: uppercase; }
+
+.cover--classic { background: var(--p-paper); }
+.cover--classic .cover-mid { align-items: center; text-align: center; }
+.cover--classic .cover-mid::after { content: ''; width: 60px; height: 2px; background: var(--p-accent); order: 1; }
+.cover--classic .cover-sub { order: 2; }
+.cover--classic .cover-top { text-align: center; }
+.cover--classic .cover-bottom { border-top: 1px solid var(--p-rule); padding-top: 16px; }
+
+.cover--full { background: var(--p-cover-bg); color: var(--p-cover-ink); }
+.cover--full .cover-top { color: inherit; opacity: .75; }
+.cover--full .cover-title { font-size: 58pt !important; }
+.cover--full .cover-mid { justify-content: flex-end; padding-bottom: .5in; }
+.cover--full .cover-bottom { border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding-top: 16px; }
+
+.cover--frame { background: var(--p-cover-bg); color: var(--p-cover-ink); padding: 0.45in; }
+.cover--frame .cover-inner { border: 1px solid color-mix(in srgb, var(--p-accent) 60%, transparent); outline: 1px solid color-mix(in srgb, var(--p-accent) 35%, transparent); outline-offset: -8px; padding: 0.7in; text-align: center; }
+.cover--frame .cover-mid { align-items: center; }
+.cover--frame .cover-title { font-weight: 400 !important; }
+.cover--frame .cover-sub { font-style: italic; }
+.cover--frame .cover-bottom { flex-direction: column; align-items: center; gap: 8px; }
+
+/* ---------- Print / PDF ---------- */
+@media print {
+  @page { margin: 0; }
+  html, body, .app, .workspace, .stage { height: auto !important; overflow: visible !important; background: none !important; display: block !important; }
+  .topbar, .panel, .mobile-switch, .modal-wrap, .toast { display: none !important; }
+  .stage-inner { padding: 0 !important; display: block !important; }
+  .doc { zoom: 1 !important; display: block; gap: 0; }
+  .page { box-shadow: none; margin: 0; break-after: page; page-break-after: always; }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .blk:hover { box-shadow: none; }
+}

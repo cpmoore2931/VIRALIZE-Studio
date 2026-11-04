@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Folio Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Design and export premium digital products: ebooks, workbooks, planners and checklists.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;600&family=DM+Serif+Display&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Jost:wght@300;400;500&family=Manrope:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/product.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">F</span>
+      <span class="brand-name">Folio Studio</span>
+    </div>
+    <div class="project-name" id="projectName">Untitled product</div>
+    <nav class="top-actions">
+      <button class="btn ghost" id="btnProjects" type="button">Projects</button>
+      <button class="btn ghost" id="btnNew" type="button">New</button>
+      <button class="btn ghost" id="btnAI" type="button">AI edit</button>
+      <button class="btn primary" id="btnPdf" type="button">Export PDF</button>
+    </nav>
+  </header>
+
+  <div class="mobile-switch" role="tablist" aria-label="View">
+    <button type="button" id="mEdit" class="on">Edit</button>
+    <button type="button" id="mPreview">Preview</button>
+  </div>
+
+  <main class="workspace">
+    <aside class="panel" id="panel">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab on" data-tab="design">Design</button>
+        <button type="button" class="tab" data-tab="content">Content</button>
+        <button type="button" class="tab" data-tab="sell">Sell</button>
+        <button type="button" class="tab" data-tab="quality">Quality <span class="score-pill" id="scorePill">–</span></button>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </aside>
+    <section class="stage" id="stage" aria-label="Product preview">
+      <div class="stage-inner" id="stageInner"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-wrap" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle"></h2>
+      <button class="btn ghost icon" type="button" id="modalClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- Load order matters: registries first, app last. No build step. -->
+<script src="js/themes.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/render.js"></script>
+<script src="js/quality.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
