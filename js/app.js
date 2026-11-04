@@ -487,7 +487,10 @@ ${JSON.stringify(clean, null, 2)}`;
     const size = Folio.paperSizes[P().paper];
     let s = $('#pageSizeStyle');
     if (!s) { s = document.createElement('style'); s.id = 'pageSizeStyle'; document.head.appendChild(s); }
-    s.textContent = `@page { size: ${size.w} ${size.h}; margin: 0; }`;
+    const paper = (Folio.themes[P().theme] || {}).paper || '#fff';
+    /* Paper color behind overflow pages, so dark themes have no white strips. */
+    s.textContent = `@page { size: ${size.w} ${size.h}; margin: 0; }
+      @media print { html, body { background: ${paper} !important; } }`;
     toast('In the print dialog choose "Save as PDF", margins "None", and turn on "Background graphics".');
     setTimeout(() => window.print(), 400);
   }

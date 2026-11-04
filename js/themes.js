@@ -4,6 +4,7 @@
  * To add a theme: copy one entry, give it a new key, change the values.
  * Fonts must also be added to the Google Fonts <link> in index.html.
  * Every value here becomes a CSS variable on the product (see render.js).
+ * Optional: up / down (candle colors) and mono (chart labels) — defaults apply if left out.
  */
 window.Folio = window.Folio || {};
 
@@ -72,6 +73,38 @@ Folio.themes = {
     accent: '#2F5D50',
     coverBg: '#2F5D50',
     coverInk: '#F2F5F1'
+  },
+  terminal: {
+    name: 'Terminal',
+    note: 'Dark trading-desk look, amber accent. Trading guides.',
+    display: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+    body: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+    mono: "'IBM Plex Mono', ui-monospace, Menlo, monospace",
+    paper: '#10141A',
+    ink: '#E3E8EF',
+    muted: '#8D97A5',
+    rule: '#262E39',
+    accent: '#F2B230',
+    up: '#26B57F',
+    down: '#F0564B',
+    coverBg: '#0A0D12',
+    coverInk: '#E3E8EF'
+  },
+  ledger: {
+    name: 'Ledger',
+    note: 'Clean white with market green and red. Trading workbooks.',
+    display: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+    body: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+    mono: "'IBM Plex Mono', ui-monospace, Menlo, monospace",
+    paper: '#FFFFFF',
+    ink: '#111827',
+    muted: '#5B6473',
+    rule: '#E3E7ED',
+    accent: '#1F5FD1',
+    up: '#13915F',
+    down: '#D63B32',
+    coverBg: '#0F1B2D',
+    coverInk: '#F3F6FA'
   }
 };
 

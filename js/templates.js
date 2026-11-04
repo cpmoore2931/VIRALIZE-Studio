@@ -52,6 +52,61 @@ Folio.templates = [
   },
 
   {
+    key: 'trading',
+    blurb: 'Day trading guide with candle charts, patterns, sizing and a journal.',
+    product: {
+      kind: 'Trading Playbook',
+      title: 'The Opening Range Playbook',
+      subtitle: 'A rules-first guide to reading candles, sizing positions and trading the first hour with discipline',
+      author: 'Your Name',
+      brand: 'Your Studio',
+      year: '2026',
+      theme: 'terminal',
+      accent: '',
+      cover: 'full',
+      paper: 'letter',
+      toc: true,
+      listing: {
+        price: '39',
+        audience: 'new and struggling day traders who want a written plan instead of gut feel',
+        promise: 'Read price action with confidence and size every trade so no single loss can hurt you.',
+        platform: 'Gumroad'
+      },
+      blocks: [
+        { type: 'chapter', title: 'Read this first', kicker: 'Risk notice', intro: 'This playbook teaches a process. It does not promise profits, and no strategy wins every trade.' },
+        { type: 'callout', label: 'Disclaimer', text: 'This guide is for **educational purposes only** and is **not financial advice**. Day trading carries a high risk of loss, and most new traders lose money. Never trade money you cannot afford to lose. Practice in a simulator before risking real capital.' },
+        { type: 'paragraph', text: 'Profitable traders are not better at predicting the future. They are better at **controlling losses**, repeating a small number of setups, and reviewing every trade honestly.\n\nThat is what this playbook gives you: a way to read the chart, a short list of setups, a sizing formula, and a journal that turns every session into data.' },
+
+        { type: 'chapter', title: 'How to read a candle', kicker: 'Foundations', intro: 'Every candle answers four questions: where price opened, how high it went, how low it went and where it closed.' },
+        { type: 'table', headers: 'Part | What it shows | What to look for', rows: ['Body | Distance from open to close | Big bodies mean conviction', 'Upper wick | Highest price rejected | Long upper wicks at resistance = sellers', 'Lower wick | Lowest price rejected | Long lower wicks at support = buyers', 'Color | **Green** closed above open, **red** below | Several in a row show who is in control'] },
+        { type: 'patterns', title: 'Single and two-candle signals', items: ['hammer', 'shootingstar', 'doji', 'bullishengulfing'] },
+        { type: 'callout', label: 'Context beats pattern', text: 'A hammer in the middle of nowhere means little. A hammer at a level the market has respected three times this week is a signal worth acting on.' },
+
+        { type: 'chapter', title: 'Market structure', kicker: 'Trend and range', intro: 'Before looking for a setup, decide which of two markets you are in: trending or ranging.' },
+        { type: 'candles', title: 'Uptrend: higher highs, higher lows', source: 'sample_uptrend', levels: [], ma: 9, caption: 'In a trend, buy pullbacks toward the 9-period moving average. Stop trading long when price closes decisively below it.' },
+        { type: 'candles', title: 'Range: fade the edges', source: 'sample_range', levels: ['101.6 | Resistance', '97.3 | Support'], ma: 0, caption: 'In a range, the edges are the trade. Buy near support, sell near resistance, and do nothing in the middle.' },
+
+        { type: 'chapter', title: 'The setups', kicker: 'Only three', intro: 'Trade a few setups well instead of many setups badly. Each one has an entry, a stop and a target before you click buy.' },
+        { type: 'candles', title: 'Opening range breakout', source: 'sample_breakout', levels: ['101.9 | Range high'], ma: 9, caption: 'Mark the high of the first 15–30 minutes. Enter on a candle **close** above it with rising volume. Stop goes below the last higher low. First target is 2R.' },
+        { type: 'patterns', title: 'Confirmation patterns', items: ['bullflag', 'doublebottom', 'morningstar', 'threesoldiers'] },
+        { type: 'table', title: 'Setup rules at a glance', headers: 'Setup | Entry | Stop | Target', rows: ['Opening range breakout | Close above range high | Below last higher low | 2R, then trail', 'Bull flag | Break of flag high | Below flag low | Pole length', 'Support bounce | Hammer or engulfing at support | Below the wick | Mid-range or 2R'] },
+
+        { type: 'chapter', title: 'Risk and position sizing', kicker: 'The part that keeps you in the game', intro: 'You decide how much you can lose **before** you decide how much you can make.' },
+        { type: 'risk', title: 'Risk 1% per trade', account: 25000, riskPct: 1, entry: 50, stops: ['0.25', '0.50', '1.00', '2.00'] },
+        { type: 'bullets', title: 'Hard rules', items: ['Never risk more than **1%** of the account on one trade.', 'Stop trading for the day after **3 losses** or **−3R**, whichever comes first.', 'Move the stop only in the direction of the trade, never further away.', 'No new positions in the last 15 minutes of the session.'] },
+
+        { type: 'chapter', title: 'Daily routine', kicker: 'Process', intro: 'Good sessions are built before the open.' },
+        { type: 'checklist', title: 'Pre-market (30 minutes)', items: ['Check the economic calendar for scheduled news', 'Build a watchlist of 3–5 stocks gapping on volume', 'Mark yesterday\'s high, low and close on each chart', 'Write the one setup you are looking for today', 'Confirm max loss for the day in dollars'] },
+        { type: 'checklist', title: 'After the close (15 minutes)', items: ['Log every trade in the journal', 'Grade each trade A–F on how well you followed the plan, not on profit', 'Screenshot your best and worst trade', 'Write one sentence: what will I do differently tomorrow?'] },
+        { type: 'prompts', title: 'Weekly review', items: ['Which setup made the most R this week?', 'Which rule did you break, and what triggered it?'], lines: 3 },
+        { type: 'journal', title: 'Trade journal — week 1' },
+        { type: 'journal', title: 'Trade journal — week 2' },
+        { type: 'notes', title: 'Chart notes', style: 'grid' }
+      ]
+    }
+  },
+
+  {
     key: 'workbook',
     blurb: 'Guided prompts and exercises with writing space.',
     product: {

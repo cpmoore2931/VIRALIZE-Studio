@@ -1,12 +1,15 @@
 # Folio Studio
 
-Create premium digital products — ebooks, workbooks, planners and checklists — and
+Create premium digital products — ebooks, workbooks, planners, checklists and day-trading guides — and
 export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your own site.
 
 ## Features
 
-- **5 designer themes** (Editorial, Luxe, Modern, Soft, Nordic) with custom accent colors
-- **13 content blocks**: chapters, text, checklists, worksheet prompts with writing lines,
+- **7 designer themes** (Editorial, Luxe, Modern, Soft, Nordic, Terminal, Ledger) with custom accent colors
+- **Trading toolkit**: vector candlestick charts (your own OHLC data or realistic samples) with
+  support/resistance levels and moving averages, 10 illustrated candle-pattern cards,
+  a position-size calculator and printable trade-journal pages
+- **17 content blocks**: chapters, text, checklists, worksheet prompts with writing lines,
   tables, callouts, quotes, weekly planner spreads, habit trackers, notes pages and more
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
@@ -14,7 +17,7 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 - **Listing copy generator** for your sales page
 - **AI edit**: one click copies a prompt for ChatGPT, Grok, Claude or Gemini; paste the reply back to apply it
 - Auto-saves in your browser; download/import `.json` backups
-- 4 ready-made starter products with real content
+- 5 ready-made starter products with real content, including *The Opening Range Playbook* (day trading)
 
 ## Run it
 

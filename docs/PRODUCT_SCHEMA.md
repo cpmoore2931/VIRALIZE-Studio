@@ -34,7 +34,7 @@ what you get from "Download .json backup".
 
 | Field | Values |
 | --- | --- |
-| `theme` | `editorial`, `luxe`, `modern`, `soft`, `nordic` |
+| `theme` | `editorial`, `luxe`, `modern`, `soft`, `nordic`, `terminal`, `ledger` |
 | `cover` | `classic`, `full`, `frame` |
 | `paper` | `letter`, `a4` |
 | `accent` | hex color like `#8C3B1F`, or `""` for the theme default |
@@ -57,6 +57,13 @@ what you get from "Download .json backup".
 | `habit` | `title`, `habits[]` | full page |
 | `notes` | `title`, `style` (`lined`, `dotted`, `grid`) | full page |
 | `pagebreak` | — | starts a new page |
+| `candles` | `title`, `source` (`sample_uptrend`, `sample_downtrend`, `sample_range`, `sample_breakout`, `custom`), `data[]` ("open high low close"), `levels[]` ("price \| label"), `ma` (number), `caption` | flows |
+| `patterns` | `title`, `items[]` (hammer, shootingstar, doji, bullishengulfing, bearishengulfing, morningstar, eveningstar, threesoldiers, bullflag, doublebottom) | flows |
+| `risk` | `title`, `account`, `riskPct`, `entry` (numbers), `stops[]` (dollar stop distances) | flows |
+| `journal` | `title`, `columns[]`, `rows` (number) | full page |
+
+For `candles` with your own data, set `source` to `custom` and give one candle per line in `data`,
+e.g. `"101.2 103.5 100.8 103.1"`.
 
 Text supports `**bold**` and `*italic*`. In `text` and `intro`, a blank line starts a new paragraph.
 The source of truth is `js/blocks.js`.

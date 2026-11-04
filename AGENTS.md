@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: themes → blocks → templates → render → quality → app.
+3. **Keep the load order** in `index.html`: themes → blocks → templates → render → quality → trading → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -29,6 +29,7 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/templates.js` | Starter products in the "New" dialog | add a ready-made product |
 | `js/render.js` | Turns a product into pages | change page-splitting, cover or contents page |
 | `js/quality.js` | Quality score checks | change what "premium" means |
+| `js/trading.js` | Candlestick charts (`Folio.chart`), pattern library (`Folio.patterns`), trading blocks | add a candle pattern, change chart drawing, add trading blocks |
 | `js/app.js` | Editor UI, saving, modals, AI prompt, PDF export | change editor behavior |
 | `css/app.css` | Editor look (light + dark) | restyle the editor |
 | `css/product.css` | Product page look + print rules | restyle the product / PDF |
@@ -63,6 +64,17 @@ fonts to the Google Fonts `<link>` in `index.html`.
 ### Add a template
 Append an object to `Folio.templates` in `js/templates.js` (see the existing ones).
 Write real, specific, high-quality content. Never use lorem ipsum.
+
+### Add a candlestick pattern
+Add an entry to `Folio.patterns` in `js/trading.js`: `name`, `signal`, `tone`
+(`up` / `down` / `neutral`), `data` (array of `[open, high, low, close]`, 4–8 candles
+with context before the pattern), `hl` (indexes of the pattern candles to highlight)
+and `text` (2–3 sentence explanation). Charts are SVG, so they stay sharp in PDFs.
+
+### Trading products
+Any product using trading blocks must include a disclaimer that it is educational,
+not financial advice, and that trading carries risk of loss. The quality check enforces this.
+Never write content promising guaranteed or specific returns.
 
 ## Quality bar for content
 

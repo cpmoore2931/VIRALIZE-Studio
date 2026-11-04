@@ -17,6 +17,8 @@ Folio.themeVars = function (p) {
     `--p-rule:${t.rule}`, `--p-accent:${accent}`,
     `--p-cover-bg:${p.cover === 'full' && p.accent ? accent : t.coverBg}`,
     `--p-cover-ink:${t.coverInk}`,
+    `--p-up:${t.up || '#1E9E6A'}`, `--p-down:${t.down || '#D9483B'}`,
+    `--p-mono:${t.mono || "'IBM Plex Mono', ui-monospace, Menlo, monospace"}`,
     `--page-w:${size.w}`, `--page-h:${size.h}`
   ].join(';');
 };

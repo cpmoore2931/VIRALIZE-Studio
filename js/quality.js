@@ -53,7 +53,7 @@ Folio.stats = function (p) {
   return {
     chapters: blocks.filter(b => b.type === 'chapter').length,
     pageBlocks: blocks.filter(b => Folio.blocks[b.type] && Folio.blocks[b.type].layout === 'page').length,
-    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit'].includes(b.type)).length,
+    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit', 'candles', 'patterns', 'risk', 'journal'].includes(b.type)).length,
     emptyChapters,
     placeholder: placeholderRe.test(text) || placeholderRe.test(p.title || ''),
     pages: Folio.pageCount(p),
