@@ -23,6 +23,9 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 
 No install needed. Download the repo and double-click `index.html`.
 
+**Deploy on Vercel:** import this repo at vercel.com/new. Framework preset: *Other*. No build
+command or settings needed (`vercel.json` is included). Every push to `main` redeploys.
+
 Or turn on **GitHub Pages** (Settings → Pages → Source: *GitHub Actions*). The included
 workflow publishes the app at `https://<your-username>.github.io/viralize-studio/`.
 
