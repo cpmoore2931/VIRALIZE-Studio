@@ -9,8 +9,16 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 - **Trading toolkit**: vector candlestick charts (your own OHLC data or realistic samples) with
   support/resistance levels and moving averages, 10 illustrated candle-pattern cards,
   a position-size calculator and printable trade-journal pages
-- **17 content blocks**: chapters, text, checklists, worksheet prompts with writing lines,
+- **22 content blocks**: chapters, text, checklists, worksheet prompts with writing lines,
   tables, callouts, quotes, weekly planner spreads, habit trackers, notes pages and more
+- **White-label brand kits**: logo, colors, fonts, platform name and contact details, applied to
+  any product in one click. Placeholders like `{{platform}}` and `{{brand}}` fill in automatically,
+  so one CRM training guide can be rebranded for every client. Starter kit: Integrity LED Pro Services
+- **Software / CRM training blocks**: how-to steps with click paths, screenshots with numbered
+  callouts, FAQs, video links with QR codes, and call-to-action boxes
+- **Getting Started CRM guide**: a 9-chapter white-label onboarding guide (login, contacts,
+  conversations, calendars, pipelines, automations, daily routine)
+- **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
 - **Quality score** that flags what keeps a product from feeling premium

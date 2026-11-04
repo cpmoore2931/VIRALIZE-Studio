@@ -107,6 +107,71 @@ Folio.templates = [
   },
 
   {
+    key: 'crm',
+    blurb: 'White-label CRM training guide: how-to steps, screenshots, videos, FAQ.',
+    product: {
+      kind: 'Client Training Guide',
+      title: 'Getting Started with {{platform}}',
+      subtitle: 'Your step-by-step guide to capturing leads, booking appointments and following up automatically',
+      author: '',
+      brand: '',
+      year: '2026',
+      theme: 'ledger',
+      accent: '',
+      cover: 'full',
+      paper: 'letter',
+      toc: true,
+      brandPreset: 'integrity',
+      listing: {
+        price: '0',
+        audience: 'new {{platform}} users on your team or your clients\' teams',
+        promise: 'Go from first login to a working lead-follow-up system in one afternoon.',
+        platform: 'Client onboarding'
+      },
+      blocks: [
+        { type: 'chapter', title: 'Welcome to {{platform}}', kicker: 'Start here', intro: '{{platform}} keeps every lead, conversation, appointment and follow-up in one place. This guide walks you through the setup that matters most, one task at a time.' },
+        { type: 'steps', title: 'Log in for the first time', path: '{{login}}', items: ['Open the welcome email from {{brand}} and click **Set up your account**.', 'Create a password with at least 12 characters.', 'If asked, turn on 2-step verification and choose text or email codes.', 'Bookmark the login page so you can find it in one click.'], result: 'You see the dashboard with your company name in the top-left corner.' },
+        { type: 'callout', label: 'Menus can vary', text: 'Your menu may look slightly different depending on which features are switched on for your account. If you cannot find something in this guide, contact {{brand}} support at {{phone}}.' },
+        { type: 'video', title: 'Watch: a 5-minute tour', url: '{{website}}', note: 'Prefer video? Scan the code to watch the walkthrough of everything in this chapter.', length: '5 min' },
+
+        { type: 'chapter', title: 'Find your way around', kicker: 'The main menu', intro: 'Everything lives in the menu on the left side of the screen. You will use five areas every day.' },
+        { type: 'screenshot', image: '', caption: 'Replace this with a screenshot of your own dashboard. Upload it in the editor and adjust the numbered callouts.', markers: ['8 22 | Main menu', '50 8 | Search contacts', '92 8 | Notifications and profile', '55 50 | Dashboard widgets'] },
+        { type: 'table', title: 'What each menu item is for', headers: 'Menu | Use it to | How often', rows: ['Dashboard | See leads, appointments and revenue at a glance | Daily', 'Conversations | Reply to texts, emails and website chats in one inbox | Many times a day', 'Calendars | See and manage booked appointments | Daily', 'Contacts | Find, add and tag every person you work with | Daily', 'Opportunities | Track each deal from new lead to won | Daily', 'Automation | Send follow-ups for you, automatically | Set up once', 'Settings | Business details, team members, phone and email | Rarely'] },
+
+        { type: 'chapter', title: 'Set up your business', kicker: 'One time, 15 minutes', intro: 'Do this once so every message and booking page shows the right name, hours and time zone.' },
+        { type: 'steps', title: 'Add your business details', path: 'Settings > Business Profile', items: ['Enter your business name, phone number and address exactly as customers know them.', 'Upload your logo.', 'Set your **time zone**. Appointment times and automations use it.', 'Click **Update Information**.'], result: 'Your logo and business name appear on booking pages and emails.' },
+        { type: 'steps', title: 'Invite your team', path: 'Settings > My Staff > Add Employee', items: ['Enter the team member\'s name, email and mobile number.', 'Choose a role: **Admin** for owners and managers, **User** for everyone else.', 'Under permissions, switch off anything they do not need.', 'Click **Save**. They receive an email invite.'], result: 'The new person appears in your staff list with an Invited status.' },
+
+        { type: 'chapter', title: 'Contacts', kicker: 'Your customer list', intro: 'Every lead and customer is a contact. Good contacts make every other feature work.' },
+        { type: 'steps', title: 'Add a contact', path: 'Contacts > Add Contact', items: ['Click the **+** button at the top of the contact list.', 'Enter first name, last name, phone and email.', 'Add a **tag** that describes them, such as *new-lead* or *customer*.', 'Click **Save**.'], result: 'The contact appears at the top of your list and you can text or email them.' },
+        { type: 'steps', title: 'Import a spreadsheet of contacts', path: 'Contacts > Import Contacts', items: ['Save your spreadsheet as a **CSV** file with one column each for name, phone and email.', 'Click **Import** and upload the file.', 'Match each column to a field, for example *Phone* to *Phone*.', 'Add a tag such as *imported-2026* so you can find this group later.', 'Start the import.'], result: 'A message confirms how many contacts were added or updated.' },
+        { type: 'callout', label: 'Pro tip', text: 'Use a small set of tags and write them down. Tags are how you send the right message to the right people later.' },
+
+        { type: 'chapter', title: 'Conversations', kicker: 'One inbox', intro: 'Texts, emails and website chat messages all arrive in one inbox, so nothing gets missed.' },
+        { type: 'steps', title: 'Reply to a message', path: 'Conversations', items: ['Click **Unread** to see messages waiting for a reply.', 'Open a conversation to see the full history with that contact.', 'Choose **SMS** or **Email** under the message box.', 'Type your reply and press **Send**.'], result: 'Your reply appears in the thread and the conversation is marked as read.' },
+
+        { type: 'chapter', title: 'Calendars and booking', kicker: 'Let customers book themselves', intro: 'A booking calendar lets customers pick a time that works, without the back-and-forth.' },
+        { type: 'steps', title: 'Create a booking calendar', path: 'Calendars > Calendar Settings > Create Calendar', items: ['Choose a simple calendar type for one person, or a round-robin type to share bookings across a team.', 'Name it after the meeting, e.g. *Free Lighting Assessment*.', 'Set the meeting length and the days and hours you are available.', 'Add a buffer between meetings if you need travel time.', 'Click **Save**, then copy the booking link.'], result: 'Opening the booking link in a private browser window shows your available times.' },
+        { type: 'steps', title: 'Connect your Google or Outlook calendar', path: 'Settings > Calendars > Connections', items: ['Click **Add new** and choose Google or Outlook.', 'Sign in and allow access.', 'Pick which calendar to check for conflicts.'], result: 'Times already busy in your personal calendar no longer show as available.' },
+
+        { type: 'chapter', title: 'Pipelines and deals', kicker: 'Never lose track of a job', intro: 'A pipeline shows every open deal as a card that moves from left to right as it progresses.' },
+        { type: 'steps', title: 'Build your sales pipeline', path: 'Opportunities > Pipelines > Create New Pipeline', items: ['Name it, e.g. *Lighting Projects*.', 'Add stages in order: **New Lead**, **Site Visit Booked**, **Quote Sent**, **Won**, **Lost**.', 'Click **Save**.', 'Open **Opportunities** and drag cards between stages as deals move forward.'], result: 'Each deal shows in the right column with its value and contact.' },
+
+        { type: 'chapter', title: 'Automations', kicker: 'Follow up without thinking about it', intro: 'A workflow does a task for you when something happens. Start with one that replies to every new lead within a minute.' },
+        { type: 'steps', title: 'Auto-reply to new website leads', path: 'Automation > Workflows > Create Workflow > Start from Scratch', items: ['Click **Add New Trigger** and choose **Form Submitted**. Pick your website form.', 'Click **+** and add the action **Send SMS**. Write a short, friendly reply.', 'Add the action **Wait** and set it to 1 day.', 'Add **Send Email** with more detail and your booking link.', 'Click **Save**, then switch the workflow from Draft to **Publish**.'], result: 'When you submit your own form as a test, you receive the text within a minute.' },
+        { type: 'callout', label: 'Test first', text: 'Always test a workflow with your own phone number and email before your customers see it. Check spelling, links and the sending name.' },
+        { type: 'table', title: 'Three more automations worth setting up', headers: 'When this happens | Do this | Why', rows: ['Appointment booked | Send confirmation + reminder 1 day before | Fewer no-shows', 'Deal moved to Won | Send thank-you + review request | More 5-star reviews', 'No reply for 3 days | Send a friendly check-in text | Revives quiet leads'] },
+
+        { type: 'chapter', title: 'Your daily routine', kicker: '10 minutes a day', intro: 'Small daily habits keep the system clean and the leads moving.' },
+        { type: 'checklist', title: 'Every morning', items: ['Clear the **Unread** tab in Conversations', 'Check today\'s appointments in Calendars', 'Move any deals that changed stage in Opportunities', 'Call or text every lead that came in overnight'] },
+        { type: 'faq', title: 'Common questions', items: ['I forgot my password. What do I do? | On the login page at {{login}}, click **Forgot password** and follow the email.', 'Can I use {{platform}} on my phone? | Yes. Ask {{brand}} for the mobile app name and sign in with the same email and password.', 'Why did a text not send? | The contact may have replied STOP, or the number may be a landline. Check the conversation for an error note.', 'Who do I call for help? | Call {{brand}} support at {{phone}} or visit {{website}}.'] },
+        { type: 'cta', title: 'Need a hand?', text: 'Book a free 20-minute setup call with the {{brand}} team and we will build your first workflow with you.', button: 'Book a setup call', url: '{{website}}' },
+        { type: 'notes', title: 'My logins and notes', style: 'lined' }
+      ]
+    }
+  },
+
+  {
     key: 'workbook',
     blurb: 'Guided prompts and exercises with writing space.',
     product: {

@@ -172,6 +172,20 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .checks .ok .mark { background: var(--good); color: var(--surface); }
 .checks .no .mark { background: var(--warn); color: var(--surface); }
 
+/* Brand tab, images, history */
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.token { font: 500 12px/1 var(--mono); padding: 6px 8px; border-radius: 6px; border: 1px dashed var(--line); background: var(--surface-2); cursor: pointer; }
+.token:hover { border-style: solid; border-color: var(--focus); }
+.color-row code { font: 12px var(--mono); color: var(--muted); }
+.img-field { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; background: var(--surface-2); }
+.img-field img { width: 88px; height: 64px; object-fit: contain; border-radius: 6px; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+.img-empty { width: 88px; height: 64px; display: grid; place-items: center; color: var(--muted); font-size: 12px; border-radius: 6px; background: var(--surface); }
+.img-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.history { display: inline-flex; }
+.history .btn.icon { font: 16px/1 var(--ui); padding: 6px 9px; text-transform: none; }
+.add-hint { margin-top: -10px; }
+
 /* Modal */
 .modal-wrap { position: fixed; inset: 0; background: rgba(10, 12, 16, .5); display: grid; place-items: center; padding: 16px; z-index: 50; }
 .modal { background: var(--surface); border-radius: 14px; width: min(860px, 100%); max-height: 90vh; overflow: auto; box-shadow: var(--shadow); }
