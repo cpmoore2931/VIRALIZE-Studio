@@ -31,6 +31,7 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/library.js` | Lifestyle pages: monthly, yearly, mealplan, cards, recipe, savings, wallart, paper, letterhead, labels | add or change calendars, cards, wall art, papers |
 | `js/art.js` | Generated vector art: floral prints, abstract collage, coloring pages (mandala, geometric, flowers), line icon set (`Folio.art.icons`) | add an icon, a palette or a new art generator |
 | `js/templates-library.js` | ~46 ready-to-sell starters with categories (planners, trackers, journals, money, art) | add a starter to the New dialog |
+| `assets/covers/` | Product photos shown on starter cards in New (set `image` on a template) | add a starter's cover photo |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
 | `js/blocks.js` | `Folio.blocks` registry + text helpers | add a new kind of content (e.g. "recipe card") |
 | `js/templates.js` | Starter products in the "New" dialog | add a ready-made product |

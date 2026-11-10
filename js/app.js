@@ -485,8 +485,10 @@
       const th = Folio.themes[t.product.theme] || Folio.themes.editorial;
       const bp = t.product.brandPreset && Folio.brandPresets[t.product.brandPreset];
       const title = String(t.product.title).replace('{{platform}}', bp ? bp.platformName : 'your CRM');
-      return `<button type="button" class="tpl" data-tpl="${t.key}">
-        <span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}</span>
+      const art = t.image
+        ? `<span class="tpl-cover tpl-cover--img"><img src="${esc(t.image)}" alt="${esc(title)} product photo" loading="lazy"></span>`
+        : `<span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}</span>`;
+      return `<button type="button" class="tpl" data-tpl="${t.key}">${art}
         <strong>${esc(t.product.kind)}</strong><small>${esc(t.blurb)}</small></button>`;
     };
     const draw = body => {

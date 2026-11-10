@@ -173,6 +173,7 @@ Folio.templates = [
 
   {
     key: 'adhdplanner',
+    image: 'assets/covers/adhdplanner.jpg',
     blurb: 'ADHD-friendly daily planner: one priority, brain dump, done list.',
     product: {
       kind: 'Daily Planner',

@@ -204,6 +204,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .tpl { display: flex; flex-direction: column; gap: 4px; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; }
 .tpl-cover { aspect-ratio: 8.5 / 11; max-width: 100%; border-radius: 10px; padding: 14px; display: flex; align-items: flex-end; font-size: 19px; line-height: 1.1; box-shadow: var(--shadow); border: 1px solid var(--line); margin-bottom: 6px; transition: transform .15s; }
 .tpl:hover .tpl-cover { transform: translateY(-3px); }
+.tpl-cover--img { padding: 0; overflow: hidden; background: var(--surface-2); }
+.tpl-cover--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tpl small { color: var(--muted); }
 .proj-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .proj-list li { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); }
