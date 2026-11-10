@@ -49,7 +49,7 @@ Folio.render = function (source) {
 
   /* Cover */
   const showLogo = brand && brand.logo && brand.logoOnCover !== false;
-  pages.push({
+  if (p.showCover !== false) pages.push({
     cls: `cover cover--${esc(p.cover || 'classic')}${showLogo ? ' has-logo' : ''}`,
     bare: true,
     html: `<div class="cover-inner">
@@ -84,6 +84,7 @@ Folio.render = function (source) {
     if (!def) return;
     if (b.type === 'chapter') ctx.chapter++;
     const html = `<div class="blk blk-${b.type}" data-id="${esc(b.id || '')}">${def.render(b, ctx)}</div>`;
+    if (def.layout === 'bare') { pages.push({ cls: `bare ${b.type}-page`, bare: true, html }); current = null; return; }
     if (def.layout === 'chapter') open('content');
     else if (def.layout === 'page') { open(`content full ${b.type}-page`); current.html += html; current = null; return; }
     else if (!current) open('content');

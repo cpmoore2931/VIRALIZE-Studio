@@ -34,12 +34,13 @@ what you get from "Download .json backup".
 
 | Field | Values |
 | --- | --- |
-| `theme` | `focus`, `editorial`, `luxe`, `modern`, `soft`, `nordic`, `terminal`, `ledger` |
+| `theme` | `blush`, `focus`, `editorial`, `luxe`, `modern`, `soft`, `nordic`, `terminal`, `ledger` |
 | `cover` | `classic`, `full`, `frame` |
 | `paper` | `letter`, `a4` |
 | `accent` | hex color like `#8C3B1F`, or `""` for the theme default |
 | `toc` | `true` / `false` (contents page appears when there are 2+ chapters) |
 | `brandId` | id of a saved brand kit, or `""` for none |
+| `showCover` | `false` to skip the cover page (wall art, paper packs, labels) |
 | `watermark` | text stamped across inside pages (e.g. `SAMPLE`), or `""` |
 
 ## Block types
@@ -69,6 +70,17 @@ what you get from "Download .json backup".
 | `faq` | `title`, `items[]` ("Question \| Answer") | flows |
 | `video` | `title`, `url`, `note`, `length` (shows a QR code) | flows |
 | `cta` | `title`, `text`, `button`, `url` | flows |
+| `monthly` | `title`, `month` ("2027-01" or empty), `start` (`mon`/`sun`), `side[]` | full page |
+| `yearly` | `title`, `year`, `start` | full page |
+| `mealplan` | `title`, `meals[]`, `side` | full page |
+| `cards` | `title`, `items[]` ("Front \| text"), `style` (`band`, `outline`, `filled`) | full page |
+| `recipe` | `title`, `serves`, `time`, `ingredients[]`, `steps[]`, `note` | flows |
+| `savings` | `title`, `goal`, `boxes`, `currency` | full page |
+| `wallart` | `text`, `cite`, `style` (`minimal`, `bold`, `glow`, `arch`, `frame`), `color` | bare page |
+| `paper` | `pattern` (gingham, stripes, dots, grid, checker, diagonal, linen, grain, watercolor), `color`, `base`, `scale` | bare page |
+| `letterhead` | `name`, `line`, `footer`, `ruled` | bare page |
+| `labels` | `items[]`, `shape` (`round`, `rect`, `pill`, `tag`), `cols` | bare page |
+| `journal` | `title`, `columns[]`, `rows`, `foot[]` (summary boxes) | full page |
 | `adhdday` | `title`, `oneThing`, `basics[]`, `water` (number), `startHour`, `endHour` (numbers) | full page |
 
 Placeholders `{{platform}}`, `{{brand}}`, `{{login}}`, `{{website}}`, `{{email}}`, `{{phone}}`

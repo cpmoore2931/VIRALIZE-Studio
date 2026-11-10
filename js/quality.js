@@ -1,7 +1,8 @@
 /*
  * QUALITY — scores a product against a "premium product" checklist.
  *
- * Each check: { label, weight, test(p, stats) → true/false, tip }.
+ * Each check: { label, weight, test(p, stats) → true/false, tip, skip?(p, stats) }.
+ * A check whose skip() returns true does not count, e.g. chapters for wall art.
  * Add or tune checks here; the Quality tab and score pill update automatically.
  */
 window.Folio = window.Folio || {};
@@ -11,23 +12,26 @@ Folio.qualityChecks = [
     test: p => (p.title || '').trim().length >= 6 && (p.title || '').length <= 60 && !/untitled/i.test(p.title),
     tip: 'Use 2–7 words that name the outcome, e.g. "The Quiet Money Method".' },
   { label: 'Subtitle states the promise', weight: 10,
+    skip: (p, s) => s.printable,
     test: p => (p.subtitle || '').trim().split(/\s+/).length >= 6,
     tip: 'Say who it is for and what they get, in one sentence.' },
   { label: 'Author or brand on the cover', weight: 5,
     test: p => !!(Folio.brandOf && Folio.brandOf(p)) || (!!((p.author || '').trim() || (p.brand || '').trim()) && !/your (name|studio)/i.test(`${p.author} ${p.brand}`)),
     tip: 'Replace "Your Name" with your real name or shop name, or pick a brand in the Brand tab.' },
   { label: 'At least 3 chapters or sections', weight: 10,
+    skip: (p, s) => s.printable,
     test: (p, s) => s.chapters >= 3 || (s.pageBlocks >= 3),
     tip: 'Buyers judge value by structure. Break content into 3 or more chapters.' },
   { label: 'Every chapter has content', weight: 10,
     test: (p, s) => s.emptyChapters === 0,
     tip: 'A chapter heading followed directly by another chapter looks unfinished.' },
   { label: 'Something to do, not just read', weight: 15,
+    skip: (p, s) => s.printable,
     test: (p, s) => s.actionable > 0,
     tip: 'Add a checklist, worksheet prompts, a table or a planner page.' },
-  { label: 'Substantial (8+ pages)', weight: 10,
-    test: (p, s) => s.pages >= 8,
-    tip: 'Add worksheets, examples or notes pages so the product feels complete.' },
+  { label: 'Substantial (8+ pages for a guide, 4+ for a tracker or pack)', weight: 10,
+    test: (p, s) => s.pages >= (s.chapters >= 3 ? 8 : 4),
+    tip: 'Add worksheets, examples or extra pages so the product feels complete.' },
   { label: 'No placeholder text', weight: 15,
     test: (p, s) => !s.placeholder,
     tip: 'Remove text like "Start writing here", "lorem ipsum", "TODO" or "First point".' },
@@ -52,8 +56,9 @@ Folio.stats = function (p) {
   const text = JSON.stringify(blocks);
   return {
     chapters: blocks.filter(b => b.type === 'chapter').length,
-    pageBlocks: blocks.filter(b => Folio.blocks[b.type] && Folio.blocks[b.type].layout === 'page').length,
-    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit', 'candles', 'patterns', 'risk', 'journal', 'steps', 'screenshot', 'faq', 'video'].includes(b.type)).length,
+    pageBlocks: blocks.filter(b => Folio.blocks[b.type] && ['page', 'bare'].includes(Folio.blocks[b.type].layout)).length,
+    printable: blocks.length > 0 && blocks.every(b => Folio.blocks[b.type] && Folio.blocks[b.type].layout === 'bare'),
+    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit', 'candles', 'patterns', 'risk', 'journal', 'steps', 'screenshot', 'faq', 'video', 'adhdday', 'monthly', 'yearly', 'mealplan', 'cards', 'recipe', 'savings'].includes(b.type)).length,
     emptyChapters,
     placeholder: placeholderRe.test(text) || placeholderRe.test(p.title || ''),
     pages: Folio.pageCount(p),
@@ -64,7 +69,7 @@ Folio.stats = function (p) {
 Folio.quality = function (p) {
   const s = Folio.stats(p);
   let got = 0, total = 0;
-  const checks = Folio.qualityChecks.map(c => {
+  const checks = Folio.qualityChecks.filter(c => !(c.skip && c.skip(p, s))).map(c => {
     const ok = !!c.test(p, s);
     total += c.weight; if (ok) got += c.weight;
     return { label: c.label, tip: c.tip, ok, weight: c.weight };

@@ -20,6 +20,9 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
   conversations, calendars, pipelines, automations, daily routine)
 - **ADHD-friendly daily planner**: one-page daily spread with one priority, energy and mood
   check-ins, color-coded boxes, brain dump, daily basics and a done list; starter *One Thing a Day*
+- **54 ready-to-sell starters** in 8 categories with search: weekly, monthly and yearly planners,
+  trackers (water, sleep, steps, skincare, medication, symptoms…), journals, mindfulness and mood cards,
+  meal prep, recipe cards, budget and savings sheets, wall art, pattern and texture papers, stationery and labels
 - **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
@@ -69,6 +72,8 @@ js/brands.js          white-label brand kits and {{placeholders}}
 js/trading.js         candlestick charts, patterns, trading blocks
 js/training.js        CRM / software training blocks
 js/planner.js         ADHD-friendly planner pages
+js/library.js         calendars, meal plans, cards, recipes, savings, wall art, papers, labels
+js/templates-library.js  the starter library shown in New
 assets/brands/        starter brand logos
 vercel.json           Vercel deploy settings
 js/app.js             editor, saving, AI edit, export

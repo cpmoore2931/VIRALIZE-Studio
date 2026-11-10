@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → app.
+3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → library → templates-library → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -28,6 +28,8 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/brands.js` | White-label brand kits, brand fonts, `{{token}}` placeholders | add a starter brand, a brand font or a new placeholder |
 | `js/training.js` | Software/CRM training blocks: steps, screenshot, faq, video (QR), cta | change how-to guides and training pages |
 | `js/planner.js` | ADHD-friendly planner pages (`adhdday` daily spread) | change the daily planner page |
+| `js/library.js` | Lifestyle pages: monthly, yearly, mealplan, cards, recipe, savings, wallart, paper, letterhead, labels | add or change calendars, cards, wall art, papers |
+| `js/templates-library.js` | ~46 ready-to-sell starters with categories (planners, trackers, journals, money, art) | add a starter to the New dialog |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
 | `js/blocks.js` | `Folio.blocks` registry + text helpers | add a new kind of content (e.g. "recipe card") |
 | `js/templates.js` | Starter products in the "New" dialog | add a ready-made product |
@@ -66,7 +68,10 @@ Copy an entry in `js/themes.js`, rename the key, change values. Add any new
 fonts to the Google Fonts `<link>` in `index.html`.
 
 ### Add a template
-Append an object to `Folio.templates` in `js/templates.js` (see the existing ones).
+Add a starter with `add(key, category, blurb, product)` in `js/templates-library.js`
+(or append to `Folio.templates` in `js/templates.js`). Categories group the New dialog.
+Block layout `bare` = full page with no margins or footer (wall art, papers, labels);
+set `showCover: false` on products that should not start with a cover.
 Write real, specific, high-quality content. Never use lorem ipsum.
 
 ### Add a candlestick pattern

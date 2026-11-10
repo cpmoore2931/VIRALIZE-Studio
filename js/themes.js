@@ -112,6 +112,24 @@ Folio.themes = {
     coverBg: '#5B4BDB',
     coverInk: '#FFFFFF'
   },
+  blush: {
+    name: 'Blush',
+    note: 'Soft pink and berry, rounded serif. Etsy-style planners.',
+    display: "'DM Serif Display', Georgia, serif",
+    body: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+    paper: '#FFF8F9',
+    ink: '#4A1D2E',
+    muted: '#8A6470',
+    rule: '#F3DCE2',
+    accent: '#C24E7A',
+    tint1: '#FDE8EE',
+    tint2: '#F4EEF8',
+    tint3: '#FFF0E6',
+    glowA: '#FAD3E0',
+    glowB: '#EBDDF7',
+    coverBg: '#F9DCE5',
+    coverInk: '#4A1D2E'
+  },
   terminal: {
     name: 'Terminal',
     note: 'Dark trading-desk look, amber accent. Trading guides.',

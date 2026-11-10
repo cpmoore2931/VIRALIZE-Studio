@@ -181,6 +181,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .history .btn.icon { font: 16px/1 var(--ui); padding: 6px 9px; text-transform: none; }
 .add-hint { margin-top: -10px; }
 
+/* New-product picker */
+.tpl-tools { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 0; }
+.tpl-tools input { width: 100%; border: 1px solid transparent; border-radius: 999px; padding: 11px 18px; background: linear-gradient(#fff, #fff) padding-box, var(--pill) border-box; box-shadow: var(--shadow-sm); }
+.tpl-tools input:focus { outline: none; box-shadow: var(--shadow); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font: 500 13px/1 var(--ui); color: var(--muted); }
+.chip.on { color: var(--ink); border-color: transparent; background: var(--pill-fill) padding-box, var(--pill) border-box; }
+#tplGroups { display: flex; flex-direction: column; gap: 22px; }
+.tpl-group { display: flex; flex-direction: column; gap: 12px; }
+.tpl-count { font-weight: 500; color: var(--focus); margin-left: 4px; }
+
 /* Modal */
 .modal-wrap { position: fixed; inset: 0; background: rgba(240, 238, 252, .55); backdrop-filter: blur(8px); display: grid; place-items: center; padding: 16px; z-index: 50; }
 .modal { background: var(--surface); border-radius: 22px; border: 1px solid var(--line); width: min(860px, 100%); max-height: 90vh; overflow: auto; box-shadow: var(--shadow); }

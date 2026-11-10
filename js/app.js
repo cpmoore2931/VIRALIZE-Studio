@@ -216,6 +216,7 @@
           ${field({ label: 'Cover', kind: 'select', options: Folio.coverStyles }, p.cover, 'cover')}
         </div>
         ${field({ label: 'Paper size', kind: 'select', options: Object.fromEntries(Object.entries(Folio.paperSizes).map(([k, v]) => [k, v.name])) }, p.paper, 'paper')}
+        ${field({ label: 'Include cover page', kind: 'checkbox' }, p.showCover !== false, 'showCover')}
         ${field({ label: 'Include table of contents', kind: 'checkbox' }, p.toc !== false, 'toc')}
         ${field({ label: 'Watermark on inside pages (e.g. SAMPLE for a free preview; leave empty for none)', kind: 'text' }, p.watermark || '', 'watermark')}
       </section>`;
@@ -476,20 +477,45 @@
   function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; }
 
   function newModal() {
-    openModal('Start a new product', `<div class="tpl-grid">${Folio.templates.map(t => {
-      const th = Folio.themes[t.product.theme];
+    const ORDER = ['Planners', 'Mind & wellness', 'Health & fitness', 'Home & food', 'Business & money', 'Guides & ebooks', 'Art & paper', 'Start from scratch'];
+    const rank = c => (ORDER.indexOf(c) + 1) || 99;
+    const cats = ['All', ...[...new Set(Folio.templates.map(t => t.cat))].sort((a, b) => rank(a) - rank(b))];
+    let cat = 'All', q = '';
+    const card = t => {
+      const th = Folio.themes[t.product.theme] || Folio.themes.editorial;
       const bp = t.product.brandPreset && Folio.brandPresets[t.product.brandPreset];
       const title = String(t.product.title).replace('{{platform}}', bp ? bp.platformName : 'your CRM');
       return `<button type="button" class="tpl" data-tpl="${t.key}">
         <span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}</span>
         <strong>${esc(t.product.kind)}</strong><small>${esc(t.blurb)}</small></button>`;
-    }).join('')}</div>`, body => {
+    };
+    const draw = body => {
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const hit = t => (cat === 'All' || t.cat === cat) &&
+        words.every(w => `${t.product.kind} ${t.product.title} ${t.blurb} ${t.cat}`.toLowerCase().includes(w));
+      const groups = cats.filter(c => c !== 'All').map(c => [c, Folio.templates.filter(t => t.cat === c && hit(t))]).filter(([, l]) => l.length);
+      $('#tplGroups', body).innerHTML = groups.length
+        ? groups.map(([c, l]) => `<section class="tpl-group"><h3 class="group-title">${esc(c)} <span class="tpl-count">${l.length}</span></h3><div class="tpl-grid">${l.map(card).join('')}</div></section>`).join('')
+        : '<p class="empty">No starters match. Try another word, or start from a blank product.</p>';
+      body.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('on', b.dataset.cat === cat));
+    };
+    openModal(`Start a new product`, `
+      <div class="tpl-tools">
+        <input type="search" id="tplSearch" placeholder="Search ${Folio.templates.length} starters, e.g. planner, budget, wall art" aria-label="Search starters">
+        <div class="chips">${cats.map(c => `<button type="button" class="chip" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      </div>
+      <div id="tplGroups"></div>`, body => {
+      draw(body);
+      $('#tplSearch', body).addEventListener('input', e => { q = e.target.value; draw(body); });
       body.addEventListener('click', e => {
+        const c = e.target.closest('[data-cat]');
+        if (c) { cat = c.dataset.cat; draw(body); return; }
         const b = e.target.closest('[data-tpl]');
         if (!b) return;
         addProject(JSON.parse(JSON.stringify(Folio.templates.find(t => t.key === b.dataset.tpl).product)));
         closeModal(); toast('New product created');
       });
+      setTimeout(() => { const i = $('#tplSearch'); if (i) i.focus(); }, 50);
     });
   }
 

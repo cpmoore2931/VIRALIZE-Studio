@@ -236,23 +236,25 @@ window.Folio = window.Folio || {};
     },
 
     journal: {
-      label: 'Trade journal page',
+      label: 'Log / tracker page',
       layout: 'page',
       fields: [
         { key: 'title', label: 'Page title', kind: 'text' },
         { key: 'columns', label: 'Columns (one per line)', kind: 'list' },
-        { key: 'rows', label: 'Number of rows', kind: 'number' }
+        { key: 'rows', label: 'Number of rows', kind: 'number' },
+        { key: 'foot', label: 'Summary boxes at the bottom (one per line, empty = none)', kind: 'list' }
       ],
-      defaults: { title: 'Trade journal', columns: ['Date', 'Ticker', 'Setup', 'L/S', 'Entry', 'Stop', 'Exit', 'Size', 'P/L', 'R', 'Grade'], rows: 18 },
+      defaults: { title: 'Trade journal', columns: ['Date', 'Ticker', 'Setup', 'L/S', 'Entry', 'Stop', 'Exit', 'Size', 'P/L', 'R', 'Grade'], rows: 18, foot: ['Win rate', 'Avg R', 'Net P/L', 'Best lesson'] },
       summary: b => `${b.title} · ${b.rows} rows`,
       render(b) {
         const cols = list(b.columns);
         const n = Math.max(1, Math.min(40, Number(b.rows) || 18));
-        return `<div class="journal">
+        const foot = list(b.foot).length;
+        return `<div class="journal" style="--rows:${n};--avail:${foot ? '7.1in' : '7.9in'}">
           <div class="weekly-head"><h2 class="page-title">${inline(b.title)}</h2><div class="date-line">Week of <span></span></div></div>
           <table class="journal-grid"><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
           <tbody>${Array.from({ length: n }, () => `<tr>${cols.map(() => '<td></td>').join('')}</tr>`).join('')}</tbody></table>
-          <div class="journal-foot"><div><span>Win rate</span></div><div><span>Avg R</span></div><div><span>Net P/L</span></div><div><span>Best lesson</span></div></div>
+          ${list(b.foot).length ? `<div class="journal-foot" style="grid-template-columns:repeat(${list(b.foot).length - 1}, 1fr) 2fr">${list(b.foot).map(f => `<div><span>${esc(f)}</span></div>`).join('')}</div>` : ''}
         </div>`;
       }
     }
