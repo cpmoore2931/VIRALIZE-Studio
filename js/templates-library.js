@@ -616,4 +616,7 @@ window.Folio = window.Folio || {};
       { type: 'labels', shape: 'pill', cols: 3, items: ['Toys', 'Books', 'Art', 'Blocks', 'Dolls', 'Cars', 'Puzzles', 'Games', 'Dress up', 'Crafts', 'Lego', 'Stuffies'] }
     ]
   });
+
+  /* Product photos for the New dialog (assets/covers/<key>.jpg, generated as listing-style mockups). */
+  Folio.templates.forEach(t => { if (!t.image) t.image = `assets/covers/${t.key}.jpg`; });
 })();
