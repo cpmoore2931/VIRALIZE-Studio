@@ -2,6 +2,8 @@
  * Shared server helpers for the api/ functions (files starting with "_" are not routes on Vercel).
  * treg(id, {body, query, method})  calls https://treg.to/call/<id> with the server-side TREG_TOKEN.
  * guard(req, res)                    checks TREG_TOKEN is set and the X-App-Passcode header matches APP_PASSCODE.
+ * claude({system, context, prompt})  asks Claude through Treg (DataForSEO's live Claude endpoint, ~1¢ a call).
+ * parseJson(text)                    pulls the JSON object or array out of a model reply.
  */
 const TREG = 'https://treg.to/call/';
 
@@ -49,4 +51,46 @@ function readBody(req) {
   return body || {};
 }
 
-module.exports = { treg, guard, readBody };
+/*
+ * The Claude endpoint takes short pieces: system ≤ 500 chars, prompt ≤ 500 chars, and up to
+ * 10 earlier messages of ≤ 500 chars each. Longer context is split into user/ai pairs ("OK").
+ */
+const CLAUDE = 'dataforseo.x.ai-optimization-claude-llm-responses-live';
+const cut = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+function chunks(texts) {
+  const out = [];
+  texts.filter(Boolean).forEach(t => {
+    let rest = String(t).replace(/[ \t]+/g, ' ').trim();
+    while (rest) {
+      let piece = rest.slice(0, 490);
+      if (rest.length > 490) { const sp = piece.lastIndexOf(' '); if (sp > 300) piece = piece.slice(0, sp); }
+      out.push({ role: 'user', message: piece }, { role: 'ai', message: 'OK' });
+      rest = rest.slice(piece.length).trim();
+    }
+  });
+  return out.slice(0, 10);
+}
+async function claude({ system, context = [], prompt, maxTokens = 1200, temperature = 0.7 }) {
+  const { json, cost } = await treg(CLAUDE, {
+    body: [{ model_name: 'claude-sonnet-4-5', max_output_tokens: maxTokens, temperature, system_message: cut(system, 500), message_chain: chunks(context), user_prompt: cut(prompt, 500) }]
+  });
+  const task = json && json.tasks && json.tasks[0];
+  if (!task || task.status_code !== 20000) {
+    const err = new Error((task && task.status_message) || (json && json.status_message) || 'The writer did not answer.');
+    err.status = 502; throw err;
+  }
+  const items = (task.result && task.result[0] && task.result[0].items) || [];
+  const text = items.flatMap(i => i.sections || []).filter(x => x.type === 'text').map(x => x.text).join('\n');
+  return { text, cost: task.cost || cost };
+}
+function parseJson(text) {
+  const s = String(text || '').replace(/```(?:json)?/g, '');
+  const a = s.search(/[[{]/);
+  if (a < 0) throw Object.assign(new Error('The writer replied without JSON. Try again.'), { status: 502 });
+  const close = s[a] === '[' ? ']' : '}';
+  const b = s.lastIndexOf(close);
+  try { return JSON.parse(s.slice(a, b + 1)); }
+  catch (e) { throw Object.assign(new Error('The writer was cut off mid-answer. Try again.'), { status: 502 }); }
+}
+
+module.exports = { treg, guard, readBody, claude, parseJson };

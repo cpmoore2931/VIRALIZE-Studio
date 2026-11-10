@@ -42,6 +42,12 @@ what you get from "Download .json backup".
 | `brandId` | id of a saved brand kit, or `""` for none |
 | `showCover` | `false` to skip the cover page (wall art, paper packs, labels) |
 | `watermark` | text stamped across inside pages (e.g. `SAMPLE`), or `""` |
+| `from` | key of the starter it was made from (Projects page, thumbnail photo) |
+| `idea`, `ai` | the idea typed into "Write it for me", and `true` when AI wrote the first draft |
+| `listing.etsy` | AI-written Etsy listing: `{ title, tags[13], description, pinTitle, pinDescription, at }` |
+| `mockups`, `pins` | generated photos `{ id, src, thumb, at, … }`; `src` links expire after 7 days, `thumb` is a small saved copy |
+| `videos`, `audio` | generated promo videos and narration links (temporary) |
+| `yt` | YouTube thumbnail settings `{ line1, line2, label, side, flip, size, bg, product, arrow }` |
 
 ## Block types
 

@@ -69,6 +69,13 @@ EverBee ~$30/mo. Bundling creation + research + mockups is the pitch.
 - **Health and finance products**: keep the "not medical / financial advice" notes the app already adds.
 - **Etsy data**: use official APIs or licensed data providers for anything shown to paying users.
 
+## Ideas to come back to
+
+- **Amazon (already a registered seller account, unused so far).** Print-on-demand T-shirts and similar
+  merch through Merch by Amazon or a POD partner, and digital products / low-content books through
+  Amazon KDP. The app's research already shows Amazon prices and "bought in past month" counts; a
+  T-shirt design generator (transparent PNG, 4500×5400) would be the natural next feature.
+
 ## Suggested next steps
 
 1. Pick 10–20 Etsy sellers and offer the current app free for feedback.

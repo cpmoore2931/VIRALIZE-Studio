@@ -31,6 +31,17 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 - **Media studio (Sell tab)**: one-click product mockup photos (~$0.03), 5-second vertical promo
   videos from a mockup (~$0.18) and narrated audio editions of chapters ($1 per 10k characters)
 - **TikTok trends**: this week's rising hashtags by industry, one click to research any of them
+- **Write it for me** (New dialog): describe a product and AI plans it, then writes every chapter with
+  worksheets at the same time (~6¢, under a minute). Uses the buyer pain points from your research
+- **What buyers say** (Trends): Reddit posts and TikTok videos about an idea, summarized into pain
+  points, wishes, video hooks and product angles (~1.5¢)
+- **Etsy listing kit** (Sell tab): a 140-character title, 13 tags and a price check from your research,
+  free; or written by AI with the description and Pinterest copy (~1¢)
+- **Pinterest pins** (Sell tab): tall 2:3 pins with a headline in four looks (~$0.03 each)
+- **YouTube thumbnails** (Sell tab): upload a photo of you pointing; the background is removed in the
+  browser (MediaPipe, free and private) and a 1280×720 thumbnail is built in the Viralize look
+- **Projects page**: every product as a card with a live first-page preview, quality score, search,
+  filters, sorting, rename, duplicate, and a one-file backup of everything
 - **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
@@ -83,6 +94,9 @@ js/planner.js         ADHD-friendly planner pages
 js/library.js         calendars, meal plans, cards, recipes, savings, wall art, papers, labels
 js/art.js             generated floral art, collage art, coloring pages and icons
 js/templates-library.js  the starter library shown in New
+js/trends.js          market data snapshot for Trends
+js/thumbnail.js       YouTube thumbnail maker (background removal + canvas drawing)
+api/                  server routes on Vercel (Treg): research, buyers, write, social, mockup, video, audio
 assets/brands/        starter brand logos
 vercel.json           Vercel deploy settings
 js/app.js             editor, saving, AI edit, export

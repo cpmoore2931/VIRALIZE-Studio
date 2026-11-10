@@ -1,7 +1,7 @@
 /*
  * /api/mockup — product mockup photos through Treg (Nano Banana Pro, about $0.03 each).
  *
- *   POST { prompt }        start a 2K 3:4 image   → { id }
+ *   POST { prompt, size }  start a 2K image (size 3:4 default; 2:3 for Pinterest pins) → { id }
  *   GET  ?id=task_…        check progress         → { status: 'processing' | 'done' | 'failed', url }
  *   GET  ?img=<url>        same-origin copy of a finished image (so the app can save a thumbnail
  *                          and offer a download); only the image host Treg returns is allowed.
@@ -14,9 +14,11 @@ module.exports = async function handler(req, res) {
   if (!guard(req, res)) return;
   try {
     if (req.method === 'POST') {
-      const prompt = String(readBody(req).prompt || '').trim().slice(0, 3000);
+      const b = readBody(req);
+      const prompt = String(b.prompt || '').trim().slice(0, 3000);
+      const size = ['3:4', '2:3', '1:1', '4:5', '9:16'].includes(b.size) ? b.size : '3:4';
       if (prompt.length < 20) return res.status(400).json({ error: 'prompt', message: 'The photo description is too short.' });
-      const { json, cost } = await treg('reapi.image-gen.gemini-3-pro-image', { body: { model: 'gemini-3-pro-image-preview', prompt, size: '3:4', resolution: '2K' } });
+      const { json, cost } = await treg('reapi.image-gen.gemini-3-pro-image', { body: { model: 'gemini-3-pro-image-preview', prompt, size, resolution: '2K' } });
       return res.status(200).json({ id: json && json.id, cost });
     }
     const { id, img } = req.query || {};

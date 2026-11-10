@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → library → art → templates-library → trends → app.
+3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → library → art → templates-library → trends → thumbnail → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -37,6 +37,9 @@ sees real pages on the right, and exports a print-ready PDF.
 | `api/mockup.js` | Product mockup photos (Nano Banana Pro, ~$0.03): start, poll, same-origin image proxy | change photo generation |
 | `api/video.js` | 5-second vertical promo video from a mockup (Seedance Lite, ~$0.18) | change video generation |
 | `api/audio.js` | Chapter narration MP3 (MiniMax Speech HD, $1 per 10k characters) | change audio |
+| `api/write.js` | AI writer (Claude via Treg, ~1¢ a call): `outline`, `chapter` and `listing` modes. Prompts must stay inside the endpoint's 500-character pieces (`claude()` in `_treg.js` splits context) | change how products or Etsy listings are written |
+| `api/buyers.js` | Reddit + TikTok posts for an idea and an AI summary of pain points, wants, hooks and angles (~1.5¢) | change buyer research |
+| `js/thumbnail.js` | `Folio.thumb.mount()`: YouTube thumbnails 1280×720. Background removal runs in the browser with MediaPipe (CDN, loaded on first use); the cut-out is kept in localStorage `folio.me`; settings saved as `product.yt` | change thumbnail layouts, colors or fonts |
 | `js/trends.js` | Market data snapshot (Google search demand + Etsy sample, pulled with Treg) for the Trends view and Trending starters | refresh trend data |
 | `assets/covers/` | Product photos shown on starter cards in New (set `image` on a template) | add a starter's cover photo |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |

@@ -133,7 +133,7 @@
     if (state.tab === 'quality' || state.tab === 'sell') {
       const keepFocus = document.activeElement && $('#panelBody').contains(document.activeElement);
       if (!keepFocus) renderPanel();
-      else if (state.tab === 'sell') { const o = $('#listingOut'); if (o) o.textContent = listingText(P()); }
+      else if (state.tab === 'sell') { const o = $('#listingOut'); if (o) o.textContent = descriptionText(P()); }
     }
   }
 
@@ -327,6 +327,84 @@
     ].filter((l, i, a) => l !== '' || (a[i - 1] !== '' && i > 0)).join('\n').trim();
   }
 
+  /* ---------- Etsy listing kit: title, 13 tags, price check ---------- */
+  const cleanTag = t => String(t || '').toLowerCase().replace(/[^a-z0-9 &'-]/g, ' ').replace(/\s+/g, ' ').trim();
+  function researchFor(p) {
+    const t = Folio.applyTokens(p);
+    return researchMatch(`${t.title} ${t.subtitle || ''} ${t.kind || ''} ${p.idea || ''} ${(p.listing || {}).audience || ''}`);
+  }
+  function autoEtsy(p) {
+    const t = Folio.applyTokens(p);
+    const r = researchFor(p);
+    const kind = cleanTag(t.kind || 'printable');
+    const ideas = r ? [r.q, ...(r.ideas || []).slice().sort((a, b) => b.score - a.score).map(i => i.kw)] : [];
+    /* Two-word phrases from the idea the product was written from (or its subtitle). */
+    const src = String(p.idea || t.subtitle || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    const pairs = src.slice(0, -1).map((w, i) => [w, src[i + 1]]).filter(([a, b]) => !STOP.has(a) && !STOP.has(b) && a.length > 2 && b.length > 2).map(x => x.join(' '));
+    const cands = [...ideas, ...pairs, `${kind} printable`, `printable ${kind}`, `${kind} template`, `${kind} pdf`, 'digital download', 'instant download', 'printable pdf', `${new Date().getFullYear() + (new Date().getMonth() > 8 ? 1 : 0)} ${kind}`];
+    const tags = [];
+    cands.map(cleanTag).forEach(c => { if (c && c.length <= 20 && c.length > 3 && !tags.includes(c) && tags.length < 13) tags.push(c); });
+    const parts = [t.title, `${t.kind || 'Printable'} Printable PDF`, ...ideas.slice(0, 3).map(titleCase), 'Instant Download'];
+    let title = '';
+    parts.filter(Boolean).forEach(x => { const next = title ? `${title} | ${x}` : x; if (next.length <= 140 && !title.toLowerCase().includes(String(x).toLowerCase())) title = next; });
+    return { title, tags, r };
+  }
+  function etsyKit(p) {
+    const auto = autoEtsy(p);
+    const E = (p.listing && p.listing.etsy) || null;
+    if (!E) return Object.assign({ ai: false }, auto);
+    const tags = (E.tags || []).slice(0, 13);
+    auto.tags.forEach(x => { if (tags.length < 13 && !tags.includes(x)) tags.push(x); });
+    return { ai: true, at: E.at, title: E.title || auto.title, tags, r: auto.r, description: E.description, pinTitle: E.pinTitle, pinDescription: E.pinDescription };
+  }
+  function descriptionText(p) { const E = p.listing && p.listing.etsy; return E && E.description ? Folio.applyTokens(p).listing.etsy.description : listingText(p); }
+  function pinCopy(p) {
+    const t = Folio.applyTokens(p);
+    const k = etsyKit(p);
+    return {
+      title: k.pinTitle || `${t.title}${t.subtitle ? `: ${t.subtitle}` : ''}`.slice(0, 100),
+      text: k.pinDescription || `${(t.listing && t.listing.promise) || ''} ${t.kind || 'Printable'} PDF, instant download, print at home or use on a tablet. ${k.tags.slice(0, 4).join(', ')}.`.trim()
+    };
+  }
+  function etsySection(p) {
+    const k = etsyKit(p);
+    const r = k.r;
+    const job = state.jobs.find(j => j.kind === 'listing');
+    const price = Number(String(p.listing.price || '').replace(/[^0-9.]/g, '')) || 0;
+    const e = r && r.etsy && r.etsy.medianPrice ? r.etsy : null;
+    const a = r && r.amazon && r.amazon.medianPrice ? r.amazon : null;
+    const priceNote = e ? `Similar Etsy listings sell for about <b>$${e.medianPrice.toFixed(2)}</b> (${e.bestsellers} of ${e.count} are Bestsellers)${a ? `, Amazon about <b>$${a.medianPrice.toFixed(2)}</b>` : ''}. ${price ? (price > e.medianPrice * 1.4 ? 'Your price is well above that: make the extra value obvious in photo 1.' : price < e.medianPrice * 0.6 ? 'Your price is far below that: you can likely charge more.' : 'Your price is in the normal range.') : 'Start near that price until you have reviews.'}` : '';
+    const ago = t => { const h = (Date.now() - t) / 36e5; return h < 1 ? 'just now' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)} days ago`; };
+    return `
+      <section class="group etsy-kit">
+        <div class="group-head"><h3 class="group-title">Etsy listing kit</h3>
+          <button type="button" class="btn small" id="aiListing"${job ? ' disabled' : ''}>${k.ai ? 'Rewrite with AI' : 'Write with AI'} <span class="hint">~1¢</span></button></div>
+        <p class="hint">${k.ai ? `Written by AI ${ago(k.at)}. <button type="button" class="linkbtn" id="resetEtsy">Use the automatic version</button>` : r ? `Built from your research on “${esc(r.q)}”.` : 'Tip: research this idea in Trends first to get tags people really search and a price check.'}</p>
+        ${job ? `<div class="media-job"><span class="spinner" aria-hidden="true"></span>${esc(job.label)}…</div>` : ''}
+        <div class="kit-row"><span class="label">Title <small class="${k.title.length > 140 ? 'down' : ''}">${k.title.length}/140</small></span><button type="button" class="btn small" data-copy-kit="title">Copy</button></div>
+        <p class="kit-title">${esc(k.title)}</p>
+        <div class="kit-row"><span class="label">Tags <small>${k.tags.length}/13</small></span><button type="button" class="btn small" data-copy-kit="tags">Copy all</button></div>
+        <div class="kit-tags">${k.tags.map(x => `<span class="kit-tag">${esc(x)}<small>${x.length}</small></span>`).join('')}</div>
+        ${priceNote ? `<p class="kit-price">${priceNote}</p>` : ''}
+      </section>`;
+  }
+  async function makeListing() {
+    const pid = state.store.current;
+    const p = P();
+    const t = Folio.applyTokens(p);
+    const r = researchFor(p);
+    const inside = [...t.blocks.filter(b => b.type === 'chapter').map(b => b.title), ...new Set(t.blocks.map(b => INSIDE[b.type]).filter(Boolean))];
+    const keywords = r ? [r.q, ...(r.ideas || []).slice().sort((a, b) => b.score - a.score).map(i => i.kw)].slice(0, 20) : [];
+    const job = startJob('listing', 'Writing your Etsy listing');
+    try {
+      const d = await api('api/write', { method: 'POST', body: { mode: 'listing', keywords, product: { title: t.title, subtitle: t.subtitle, kind: t.kind, audience: t.listing.audience, promise: t.listing.promise, pages: Folio.stats(p).pages, paper: Folio.paperSizes[p.paper].name, inside } } });
+      const prod = state.store.projects[pid];
+      prod.listing.etsy = Object.assign({ at: Date.now() }, d.listing);
+      save();
+      endJob(job, 'Etsy listing written');
+    } catch (err) { endJob(job, mediaError(err)); }
+  }
+
   function sellTab() {
     const p = P();
     const L = p.listing;
@@ -340,11 +418,12 @@
         ${field({ label: 'Who it is for', kind: 'text' }, L.audience, 'listing.audience')}
         ${field({ label: 'One-sentence promise', kind: 'textarea' }, L.promise, 'listing.promise')}
       </section>
+      ${etsySection(p)}
       <section class="group">
-        <div class="group-head"><h3 class="group-title">Listing copy</h3>
+        <div class="group-head"><h3 class="group-title">Description</h3>
           <button type="button" class="btn small" id="copyListing">Copy</button></div>
-        <pre class="listing" id="listingOut">${esc(listingText(p))}</pre>
-        <p class="hint">Paste into Gumroad, Etsy, Payhip, Stan or your own site. Updates as you edit.</p>
+        <pre class="listing" id="listingOut">${esc(descriptionText(p))}</pre>
+        <p class="hint">Paste into Etsy, Gumroad, Payhip, Stan or your own site. ${L.etsy && L.etsy.description ? 'Written by AI; edit the product and use “Rewrite with AI” to refresh it.' : 'Updates as you edit.'}</p>
       </section>
       ${mediaSections(p)}`;
   }
@@ -365,7 +444,7 @@
   /* ---------- panel events ---------- */
   function onPanelInput(e) {
     const el = e.target;
-    const mediaKeys = { mockStyle: 'style', mockNotes: 'notes', audioChapter: 'chapter', audioSpeed: 'speed' };
+    const mediaKeys = { mockStyle: 'style', mockNotes: 'notes', audioChapter: 'chapter', audioSpeed: 'speed', pinHead: 'pinHead', pinLook: 'pinLook' };
     if (mediaKeys[el.id]) { state.media[mediaKeys[el.id]] = el.value; if (el.id === 'audioChapter') renderPanel(); return; }
     if (!el.dataset.path || el.type === 'file') return;
     const kind = el.dataset.kind;
@@ -444,15 +523,22 @@
       if (card) card.scrollIntoView({ block: 'center' });
       return;
     }
-    if (e.target.id === 'copyListing') { copy(listingText(p), 'Listing copied'); return; }
+    if (e.target.id === 'copyListing') { copy(descriptionText(p), 'Description copied'); return; }
+    if (e.target.closest('#aiListing')) { makeListing(); return; }
+    if (e.target.id === 'resetEtsy') { checkpoint(true); delete p.listing.etsy; save(); renderPanel(); toast('Back to the automatic title and tags'); return; }
+    const ck = e.target.closest('[data-copy-kit]');
+    if (ck) { const k = etsyKit(p); copy(ck.dataset.copyKit === 'title' ? k.title : k.tags.join(', '), ck.dataset.copyKit === 'title' ? 'Title copied' : 'Tags copied (paste them into Etsy\'s tag box)'); return; }
+    if (e.target.closest('#copyPin')) { const c = pinCopy(p); copy(`${c.title}\n\n${c.text}`, 'Pin title and description copied'); return; }
+    if (e.target.id === 'makePin') { makePin(); return; }
+    if (e.target.id === 'makeThumb') { thumbModal(); return; }
     if (e.target.id === 'makeMockup') { makeMockup(); return; }
     if (e.target.id === 'makeAudio') { makeAudio(); return; }
     if (e.target.id === 'savePass') { store.set(PASS_KEY, $('#passSet').value.trim()); toast('Passcode saved on this device'); renderPanel(); return; }
     const mv = e.target.closest('[data-mk-video]');
     if (mv) { const m = (p.mockups || []).find(x => x.id === mv.dataset.mkVideo); if (m) makeVideo(m); return; }
-    const del = e.target.closest('[data-mk-del],[data-vid-del],[data-aud-del]');
+    const del = e.target.closest('[data-mk-del],[data-vid-del],[data-aud-del],[data-pin-del]');
     if (del) {
-      const [key, id] = del.dataset.mkDel ? ['mockups', del.dataset.mkDel] : del.dataset.vidDel ? ['videos', del.dataset.vidDel] : ['audio', del.dataset.audDel];
+      const [key, id] = del.dataset.mkDel ? ['mockups', del.dataset.mkDel] : del.dataset.vidDel ? ['videos', del.dataset.vidDel] : del.dataset.pinDel ? ['pins', del.dataset.pinDel] : ['audio', del.dataset.audDel];
       p[key] = (p[key] || []).filter(x => x.id !== id); save(); renderPanel(); return;
     }
 
@@ -483,8 +569,13 @@
   /* ---------- modals ---------- */
   function openModal(title, html, onReady) {
     $('#modalTitle').textContent = title;
-    $('#modalBody').innerHTML = html;
+    /* A fresh body each time: listeners added by an earlier dialog must not fire again. */
+    const old = $('#modalBody');
+    const fresh = old.cloneNode(false);
+    old.replaceWith(fresh);
+    fresh.innerHTML = html;
     $('#modal').hidden = false;
+    document.querySelector('.modal').scrollTop = 0;
     if (onReady) onReady($('#modalBody'));
   }
   function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; document.querySelector('.modal').classList.remove('modal--wide'); }
@@ -517,6 +608,7 @@
     if (!t) return;
     const prod = JSON.parse(JSON.stringify(t.product));
     if (rename) { prod.title = rename; prod.kind = rename; }
+    prod.from = key;
     addProject(prod);
     closeModal();
     toast(rename ? `Started "${rename}" from the ${t.product.kind} starter. Tailor the pages to fit.` : 'New product created');
@@ -581,7 +673,7 @@
   }
 
   function mediaError(err) {
-    if (err.status === 0) return 'Photos, videos and audio run on your live site (studio.tryviralize.com).';
+    if (err.status === 0) return 'AI writing, photos, videos and audio run on your live site (studio.tryviralize.com).';
     if (err.status === 401) return 'Enter your passcode under "Research and media settings" below.';
     if (err.status === 503 || err.status === 404) return 'One-time setup needed: add TREG_TOKEN and APP_PASSCODE in Vercel, then redeploy. Open Trends for step-by-step help.';
     if (err.status === 402) return 'Your Treg balance is empty. Top up at treg.to.';
@@ -641,6 +733,69 @@
     } catch (err) { endJob(job, mediaError(err)); }
   }
 
+  const PIN_LOOKS = {
+    bold: ['Bold color banner', 'The top third is a solid band in the accent color with the headline in large white type; below it, a photorealistic styled photo of the product on a desk'],
+    minimal: ['Minimal and airy', 'An airy cream background with plenty of white space, the headline at the top in elegant dark type, and the product photographed below on linen with soft shadows'],
+    collage: ['Page collage', 'The headline at the top on a light background; below it, three or four inside pages of the product fanned out and overlapping like a collage'],
+    ipad: ['Tablet + print', 'The headline at the top; below it, the product shown on an iPad screen with an Apple Pencil, next to printed pages on a bright desk']
+  };
+  function pinHeadline(p) {
+    const t = Folio.applyTokens(p);
+    const promise = String((t.listing && t.listing.promise) || '').replace(/\.$/, '');
+    return state.media.pinHead || (promise && promise.length <= 60 ? promise : t.title);
+  }
+  function pinPrompt(p, look, headline) {
+    const t = Folio.applyTokens(p);
+    const th = Folio.themes[p.theme] || Folio.themes.editorial;
+    const brand = Folio.brandOf(p);
+    const accent = p.accent || (brand && brand.primary) || th.accent;
+    const kinds = [...new Set((p.blocks || []).map(b => INSIDE[b.type]).filter(Boolean))].slice(0, 3);
+    return `Vertical 2:3 Pinterest pin graphic advertising a printable digital product: a ${t.kind || 'printable'} titled "${t.title}" showing ${kinds.join(', ') || 'its inside pages'}. Layout: ${(PIN_LOOKS[look] || PIN_LOOKS.bold)[1]}. The headline reads exactly "${headline}" in large, bold, highly legible modern sans-serif type. A small rounded label near the bottom reads exactly "INSTANT DOWNLOAD". Color palette: ${accent} with ${th.paper} and soft neutrals. Professional Pinterest marketing design for an Etsy shop, crisp and high contrast, all text spelled exactly as written, no other text, no watermark, no logos.`;
+  }
+  async function makePin() {
+    const pid = state.store.current;
+    const p = P();
+    const look = state.media.pinLook || 'bold';
+    const headline = String(pinHeadline(p)).slice(0, 80);
+    const job = startJob('pin', `${PIN_LOOKS[look][0]} pin`);
+    try {
+      const { id } = await api('api/mockup', { method: 'POST', body: { prompt: pinPrompt(p, look, headline), size: '2:3' } });
+      const url = await pollUntilDone('api/mockup', id);
+      const thumb = await thumbOf(url);
+      const prod = state.store.projects[pid];
+      prod.pins = [{ id: uid(), src: url, thumb, look, headline, at: Date.now() }, ...(prod.pins || [])].slice(0, 8);
+      save();
+      endJob(job, 'Pin ready');
+    } catch (err) { endJob(job, mediaError(err)); }
+  }
+
+  /* YouTube thumbnail maker (js/thumbnail.js). Settings are saved on the product as p.yt. */
+  function thumbModal() {
+    const pid = state.store.current;
+    const p = P();
+    const t = Folio.applyTokens(p);
+    const images = [];
+    (p.mockups || []).forEach((m, i) => {
+      const fresh = Date.now() - m.at < 6.5 * 864e5;
+      images.push({ key: m.id, label: `Mockup photo ${i + 1} (${MOCK_LABELS[m.style] || 'photo'})`, srcs: [fresh ? proxied(m.src) : '', m.thumb].filter(Boolean) });
+    });
+    const tpl = Folio.templates.find(x => x.key === p.from);
+    if (tpl && tpl.image) images.push({ key: 'starter', label: 'Starter product photo', srcs: [tpl.image] });
+    const words = String(t.title || '').split(/\s+/).filter(Boolean);
+    const half = Math.ceil(words.length / 2);
+    const price = String((p.listing && p.listing.price) || '').replace(/[^0-9.]/g, '');
+    const defaults = words.length <= 2 ? { line1: t.title, line2: t.kind || '' } : { line1: words.slice(0, half).join(' '), line2: words.slice(half).join(' ') };
+    defaults.label = price && Number(price) > 0 ? `$${price} printable` : 'Free printable';
+    openModal('YouTube thumbnail', '<div id="ytMount"></div>', body => {
+      body.closest('.modal').classList.add('modal--wide');
+      Folio.thumb.mount($('#ytMount', body), {
+        product: p, images, toast,
+        settings: Object.assign(defaults, p.yt || {}),
+        onChange: s => { const prod = state.store.projects[pid]; if (prod) { prod.yt = s; save(); } }
+      });
+    });
+  }
+
   async function makeVideo(m) {
     const pid = state.store.current;
     if (Date.now() - m.at > 6.5 * 864e5) { toast('That photo link has expired. Make a fresh mockup first.'); return; }
@@ -694,6 +849,30 @@
           <p class="hint">Full-size downloads stay available for 7 days after each photo is made.</p>` : ''}
       </section>
       <section class="group media">
+        <div class="group-head"><h3 class="group-title">Pinterest pins</h3><span class="hint">about $0.03 each</span></div>
+        <p class="hint">Tall 2:3 pins with a headline that send Pinterest buyers to your listing. Pin 3 to 5 different looks per product.</p>
+        <div class="row2">
+          <label class="field" for="pinHead"><span>Headline on the pin</span><input type="text" id="pinHead" maxlength="80" value="${esc(pinHeadline(p))}"></label>
+          <label class="field" for="pinLook"><span>Look</span><select id="pinLook">${Object.entries(PIN_LOOKS).map(([k, v]) => `<option value="${k}"${k === (state.media.pinLook || 'bold') ? ' selected' : ''}>${v[0]}</option>`).join('')}</select></label>
+        </div>
+        <button type="button" class="btn primary" id="makePin">Make a pin</button>
+        ${jobs('pin')}
+        ${(p.pins || []).length ? `<div class="mock-grid mock-grid--pin">${p.pins.map(m => `<figure class="mock">
+          ${m.thumb ? `<img src="${esc(m.thumb)}" alt="Pinterest pin">` : '<span class="mock-empty">Preview unavailable</span>'}
+          <figcaption><small>${esc((PIN_LOOKS[m.look] || [''])[0])} · ${ago(m.at)}</small>
+            <span class="mock-acts">${Date.now() - m.at < 6.5 * 864e5 ? `<a class="btn small" href="${esc(proxied(m.src, fileName + '-pin'))}" download>Download</a>` : '<small>Full-size link expired</small>'}
+            <button type="button" class="btn ghost small danger" data-pin-del="${esc(m.id)}">Remove</button></span></figcaption></figure>`).join('')}</div>` : ''}
+        <div class="kit-row"><span class="label">Pin title and description</span><button type="button" class="btn small" id="copyPin">Copy</button></div>
+        <pre class="listing pin-copy">${esc(pinCopy(p).title)}
+
+${esc(pinCopy(p).text)}</pre>
+      </section>
+      <section class="group media">
+        <div class="group-head"><h3 class="group-title">YouTube thumbnail</h3><span class="hint">free</span></div>
+        <p class="hint">Upload a photo of you pointing. Viralize removes the background and builds a 1280×720 thumbnail with big text and this product, in the Viralize look.</p>
+        <button type="button" class="btn primary" id="makeThumb">Make a YouTube thumbnail</button>
+      </section>
+      <section class="group media">
         <div class="group-head"><h3 class="group-title">Promo videos</h3><span class="hint">about $0.18 each, 5 s vertical</span></div>
         <p class="hint">For TikTok, Reels and Pins. Use "Make video" on any photo above.</p>
         ${jobs('video')}
@@ -718,6 +897,107 @@
         <p class="hint">Photos, videos, audio and research run through Treg on your server. Enter the APP_PASSCODE you set in Vercel.</p>
         <div class="research-form"><input type="password" id="passSet" placeholder="Passcode" value="${esc(store.get(PASS_KEY, ''))}" autocomplete="current-password" aria-label="Passcode"><button type="button" class="btn" id="savePass">Save</button></div>
       </details>`;
+  }
+
+  /* ---------- AI writer (server: api/write.js → Treg → Claude) ---------- */
+  const STOP = new Set(['for', 'and', 'the', 'with', 'printable', 'template', 'pdf', 'digital', 'of', 'to', 'my', 'best', 'cute', 'simple', 'your', 'that', 'this', 'who', 'from', 'into']);
+  const sig = t => String(t || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !STOP.has(w));
+  /* The saved research (Trends) that best matches some text, or null. need = a field it must have. */
+  function researchMatch(text, need) {
+    const words = sig(text);
+    let best = null, bs = 0;
+    store.get(RESEARCH_KEY, []).forEach(r => {
+      if (need && !r[need]) return;
+      const w = sig(r.q);
+      if (!w.length) return;
+      const sc = w.filter(x => words.includes(x)).length / w.length;
+      if (sc > bs) { bs = sc; best = r; }
+    });
+    return bs >= 0.5 ? best : null;
+  }
+  /* Keep only known block types and fields, with the right value shapes. */
+  function cleanAiBlocks(list) {
+    return (list || []).filter(b => b && Folio.blocks[b.type]).map(b => {
+      const o = { type: b.type };
+      Folio.blocks[b.type].fields.forEach(f => {
+        const v = b[f.key];
+        if (v == null) return;
+        if (f.kind === 'list') o[f.key] = (Array.isArray(v) ? v : String(v).split('\n')).map(x => String(x).trim()).filter(Boolean);
+        else if (f.kind === 'number') { const n = Number(v); if (isFinite(n)) o[f.key] = n; }
+        else if (f.kind === 'select') { if (f.options && f.options[v]) o[f.key] = v; }
+        else if (f.kind !== 'image' && f.kind !== 'checkbox') o[f.key] = String(v);
+      });
+      return o;
+    });
+  }
+  /* Plan once, then write every chapter at the same time. About 6¢ and 30–60 seconds. */
+  async function writeProduct(idea, n, status) {
+    const call = body => api('api/write', { method: 'POST', body });
+    const retry = body => call(body).catch(e => (e.status === 401 || e.status === 402 || e.status === 0 || e.status === 503) ? Promise.reject(e) : wait(1500).then(() => call(body)));
+    const buyers = researchMatch(idea, 'buyers');
+    const sum = buyers && buyers.buyers.summary;
+    const pains = sum ? [...(sum.pains || []), ...(sum.wants || [])].slice(0, 6) : [];
+    status('Planning your product…', 0, 0);
+    const o = await retry({ mode: 'outline', idea, chapters: n, pains });
+    const plan = o.plan;
+    let cost = o.cost || 0, done = 0;
+    const total = plan.chapters.length;
+    status(`Writing “${plan.title}”…`, 0, total);
+    const ctx = { title: plan.title, subtitle: plan.subtitle, kind: plan.kind, audience: plan.listing.audience, promise: plan.listing.promise };
+    const others = plan.chapters.map(c => c.title);
+    const res = await Promise.allSettled(plan.chapters.map((chapter, index) =>
+      retry({ mode: 'chapter', plan: ctx, chapter, index, total, others }).then(r => { done++; status(`Writing “${plan.title}”…`, done, total); return r; })));
+    const blocks = [];
+    let failed = 0;
+    res.forEach((r, i) => {
+      if (r.status === 'fulfilled') { blocks.push(...cleanAiBlocks(r.value.blocks)); cost += r.value.cost || 0; }
+      else { failed++; const c = plan.chapters[i]; blocks.push({ type: 'chapter', title: c.title, kicker: c.kicker, intro: c.goal }); }
+    });
+    if (failed === total) throw res[0].reason;
+    blocks.push({ type: 'notes', title: 'Notes', style: 'lined' });
+    const last = Object.values(state.store.projects).sort((a, b) => (b.updated || 0) - (a.updated || 0))[0] || {};
+    const theme = Folio.themes[plan.theme] ? plan.theme : 'viralize';
+    const keep = (v, ph) => (v && v !== ph ? v : '');
+    return {
+      failed, cost,
+      prod: {
+        kind: plan.kind, title: plan.title || titleCase(idea), subtitle: plan.subtitle, theme, accent: '', cover: theme === 'viralize' ? 'glow' : 'classic',
+        paper: last.paper || 'letter', toc: true, author: keep(last.author, 'Your Name'), brand: keep(last.brand, 'Your Studio'), year: String(new Date().getFullYear()),
+        listing: Object.assign({ platform: 'Etsy' }, plan.listing), blocks, idea, ai: true
+      }
+    };
+  }
+  function writeBox(prefill) {
+    return `<section class="research ai-write" id="aiWrite">
+        <div><h3 class="research-title">Write it for me</h3>
+        <p class="hint">Describe the product. AI plans it and writes every chapter with real worksheets, ready for you to edit. About 6¢, under a minute.${researchMatch(prefill || '', 'buyers') ? ' It will use the buyer pain points from your research.' : ''}</p></div>
+        <form class="research-form" id="writeForm">
+          <input type="search" id="writeIdea" placeholder="e.g. ADHD budget planner for busy moms" aria-label="Product idea" maxlength="120" autocomplete="off" value="${esc(prefill || '')}">
+          <select id="writeLen" aria-label="Length"><option value="3">Short · 3 chapters</option><option value="4" selected>Standard · 4</option><option value="6">Deep · 6</option></select>
+          <button type="submit" class="btn primary" id="writeGo">Write it</button>
+        </form>
+        <div id="writeOut">${state.writing ? state.writeHtml || '' : ''}</div>
+      </section>`;
+  }
+  async function startWriting(idea, n) {
+    idea = String(idea || '').trim();
+    if (idea.length < 4) { toast('Describe the product in a few words first.'); return; }
+    if (state.writing) { toast('Already writing one. It opens when it is ready.'); return; }
+    state.writing = true;
+    const show = html => { state.writeHtml = html; const o = document.getElementById('writeOut'); if (o) o.innerHTML = html; };
+    const status = (msg, d, t) => show(`<div class="research-loading"><span class="spinner" aria-hidden="true"></span>${esc(msg)}${t ? ` <small>${d} of ${t} chapters done</small>` : ''}</div>
+      <div class="progress" aria-hidden="true"><span style="width:${t ? Math.max(12, Math.round(d / t * 100)) : 6}%"></span></div>`);
+    try {
+      const r = await writeProduct(idea, n, status);
+      state.writing = false;
+      if (document.getElementById('aiWrite')) closeModal();
+      addProject(r.prod);
+      toast(`Written: “${r.prod.title}”${r.cost ? ` for $${r.cost.toFixed(2)}` : ''}.${r.failed ? ` ${r.failed === 1 ? '1 chapter still needs' : `${r.failed} chapters still need`} writing (the outline is kept).` : ' Read it through and make it yours.'}`);
+    } catch (err) {
+      state.writing = false;
+      show(`<div class="research-note"><strong>That did not work</strong><p>${esc(mediaError(err))}</p></div>`);
+      if (!document.getElementById('writeOut')) toast(mediaError(err));
+    }
   }
 
   /* ---------- live research (server: api/research.js → Treg) ---------- */
@@ -754,10 +1034,33 @@
     });
     return best;
   }
-  const titleCase = s => String(s).replace(/\b[a-z]/g, c => c.toUpperCase());
+  const titleCase = s => String(s).replace(/\b[a-z]/g, c => c.toUpperCase()).replace(/\b(Adhd|Pdf|Diy|Crm|Kdp|Seo|Ai|Svg)\b/g, m => m.toUpperCase());
   function makeButtons(kw) {
     const t = closestStarter(kw);
-    return `<button type="button" class="btn small primary" data-make="${t ? esc(t.key) : 'blank'}" data-rename="${esc(titleCase(kw))}">${t ? `Make with ${esc(t.product.kind)}` : 'Start blank'}</button>`;
+    return `<button type="button" class="btn small primary" data-write="${esc(kw)}">Write with AI</button><button type="button" class="btn small" data-make="${t ? esc(t.key) : 'blank'}" data-rename="${esc(titleCase(kw))}">${t ? `Use ${esc(t.product.kind)} starter` : 'Start blank'}</button>`;
+  }
+
+  /* "What buyers say": Reddit + TikTok posts and an AI summary (api/buyers.js). */
+  function buyersHtml(r) {
+    const b = r.buyers;
+    if (!b) return `<article class="tcard buyers-cta">
+        <div class="tcard-top"><strong>What buyers say</strong><span class="tpill">Reddit + TikTok</span></div>
+        <p>Read real posts and videos about “${esc(r.q)}” and get the top pain points, wishes and video hooks to build into your product. About 1.5¢.</p>
+        <button type="button" class="btn small primary" data-buyers="${esc(r.q)}">Find buyer pain points</button></article>`;
+    const S = b.summary;
+    const col = (t, l) => l && l.length ? `<div class="buy-col"><h5>${t}</h5><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const when = new Date(b.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<article class="tcard buyers">
+        <div class="tcard-top"><strong>What buyers say about “${esc(r.q)}”</strong><span class="tpill tpill--rising">${b.reddit.length} Reddit posts · ${b.tiktok.length} TikToks</span></div>
+        ${S ? `<div class="buy-cols">${col('Pain points', S.pains)}${col('What they want', S.wants)}
+          ${S.hooks && S.hooks.length ? `<div class="buy-col"><h5>Video hooks</h5><ul>${S.hooks.map(h => `<li>${esc(h)} <button type="button" class="linkbtn" data-copy="${esc(h)}">Copy</button></li>`).join('')}</ul></div>` : ''}</div>
+          ${S.angles && S.angles.length ? `<div class="chips buy-angles"><span class="hint">Product angles:</span>${S.angles.map(a => `<button type="button" class="chip" data-write="${esc(a)}" title="Write this with AI">${esc(a)}</button>`).join('')}</div>` : ''}` : ''}
+        <div class="buy-src">
+          <div><h5>Reddit</h5>${b.reddit.slice(0, 6).map(p => `<a class="buy-post" href="${esc(p.url)}" target="_blank" rel="noopener"><b>${esc(p.title)}</b><small>r/${esc(p.sub)} · ${fmtNum(p.comments)} comments · ${fmtNum(p.score)} upvotes</small></a>`).join('') || '<p class="hint">No posts found.</p>'}</div>
+          <div><h5>TikTok</h5>${b.tiktok.slice(0, 6).map(v => `<a class="buy-post" href="${esc(v.url)}" target="_blank" rel="noopener"><b>${esc(v.text)}</b><small>${fmtNum(v.views)} views · ${fmtNum(v.saves)} saves${v.author ? ` · @${esc(v.author)}` : ''}</small></a>`).join('') || '<p class="hint">No videos found.</p>'}</div>
+        </div>
+        <p class="hint">Checked ${esc(when)}${b.cost ? ` · cost $${b.cost.toFixed(3)}` : ''} · <button type="button" class="linkbtn" data-buyers="${esc(r.q)}">Check again</button>. “Write with AI” uses these pain points automatically.${b.warnings && b.warnings.length ? ` ${esc(b.warnings.join(' '))}` : ''}</p>
+      </article>`;
   }
 
   function initResearch(el) {
@@ -814,6 +1117,7 @@
             <div class="etsy-list">${r.amazon.products.slice(0, 4).map(a => `<a href="${esc(a.url)}" target="_blank" rel="noopener" class="etsy-item">${a.image ? `<img src="${esc(a.image)}" alt="" loading="lazy">` : '<span class="etsy-noimg"></span>'}<span><b>${esc(a.price || '')}</b>${a.sales ? ` <em>${esc(a.sales)}</em>` : ''}<small>${esc(a.title)}</small></span></a>`).join('')}</div>
           </article>` : ''}
         </div>` : ''}
+        <div class="research-buyers" id="buyersOut">${buyersHtml(r)}</div>
         ${r.ideas.length ? `<h4 class="research-sub">Related ideas people search <span class="hint">(${r.ideas.length}${r.skipped ? `, ${r.skipped} store-brand or "free" searches hidden` : ''})</span></h4>
         <div class="trend-table"><table><thead><tr><th>Idea</th><th>Last 12 months</th><th class="num">Latest month</th><th class="num">3-mo change</th><th>Peak</th><th>Status</th><th>Why</th><th></th></tr></thead><tbody>
           ${r.ideas.map(i => `<tr><td><strong>${esc(i.kw)}</strong><small>${esc(i.comp)} competition${i.intent ? ` · ${esc(i.intent)}` : ''}</small></td><td>${sparkline(i.series)}</td>
@@ -856,6 +1160,8 @@
         } else if (!res.ok) {
           ask('That search did not go through', `<p>${esc(data.message || `Error ${res.status}`)}. Try again in a moment.</p>`);
         } else {
+          const prev = history().find(x => x.q === q);
+          if (prev && prev.buyers && !data.buyers) data.buyers = prev.buyers;
           remember(data); shell(); $('#researchQ', el).value = q; bind(); renderResult(data);
         }
       } catch (err) {
@@ -868,7 +1174,25 @@
     function bind() {
       $('#researchForm', el).addEventListener('submit', ev => { ev.preventDefault(); run($('#researchQ', el).value); });
     }
+    async function buyers(q) {
+      const box = $('#buyersOut', el);
+      if (!box || !current) return;
+      box.innerHTML = '<div class="research-loading"><span class="spinner" aria-hidden="true"></span>Reading Reddit and TikTok, then summarizing… (about 20 seconds)</div>';
+      try {
+        const data = await api('api/buyers', { method: 'POST', body: { q } });
+        const saved = Object.assign({}, current, { buyers: data });
+        delete saved.cached;
+        remember(saved);
+        current = saved;
+        box.innerHTML = buyersHtml(saved);
+      } catch (err) {
+        box.innerHTML = `<div class="research-note"><strong>Could not check buyers</strong><p>${esc(mediaError(err))}</p></div>`;
+      }
+    }
     el.addEventListener('click', ev => {
+      const w = ev.target.closest('[data-write]'); if (w) { newModal(w.dataset.write); return; }
+      const by = ev.target.closest('[data-buyers]'); if (by) { buyers(by.dataset.buyers); return; }
+      const cp = ev.target.closest('[data-copy]'); if (cp) { copy(cp.dataset.copy, 'Hook copied'); return; }
       const r = ev.target.closest('[data-research]'); if (r) { run(r.dataset.research); el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
       const rc = ev.target.closest('[data-recent]'); if (rc) { run(rc.dataset.recent); return; }
       const rf = ev.target.closest('[data-refresh]'); if (rf) { run(rf.dataset.refresh, true); return; }
@@ -957,7 +1281,8 @@
     });
   }
 
-  function newModal() {
+  function newModal(prefill) {
+    if (typeof prefill !== 'string') prefill = '';
     const ORDER = ['Planners', 'Mind & wellness', 'Health & fitness', 'Home & food', 'Business & money', 'Guides & ebooks', 'Art & paper', 'Start from scratch'];
     const rank = c => (ORDER.indexOf(c) + 1) || 99;
     const cats = ['All', ...(TRENDS.length ? ['Trending'] : []), ...[...new Set(Folio.templates.map(t => t.cat))].sort((a, b) => rank(a) - rank(b))];
@@ -989,12 +1314,15 @@
       body.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('on', b.dataset.cat === cat));
     };
     openModal(`Start a new product`, `
+      ${writeBox(prefill)}
+      <h3 class="group-title snap-title">Or start from a ready-made starter</h3>
       <div class="tpl-tools">
         <input type="search" id="tplSearch" placeholder="Search ${Folio.templates.length} starters, e.g. planner, budget, wall art" aria-label="Search starters">
         <div class="chips">${cats.map(c => `<button type="button" class="chip${c === 'Trending' ? ' chip--hot' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
       </div>
       <div id="tplGroups"></div>`, body => {
       draw(body);
+      $('#writeForm', body).addEventListener('submit', ev => { ev.preventDefault(); startWriting($('#writeIdea', body).value, Number($('#writeLen', body).value)); });
       $('#tplSearch', body).addEventListener('input', e => { q = e.target.value; draw(body); });
       body.addEventListener('click', e => {
         const c = e.target.closest('[data-cat]');
@@ -1002,47 +1330,197 @@
         const b = e.target.closest('[data-tpl]');
         if (b) startTemplate(b.dataset.tpl);
       });
-      setTimeout(() => { const i = $('#tplSearch'); if (i) i.focus(); }, 50);
+      setTimeout(() => { const i = prefill ? $('#writeIdea') : $('#tplSearch'); if (i) i.focus(); }, 50);
     });
   }
 
+  /* ---------- Projects: every product as a card with a live first-page thumbnail ---------- */
+  const projCache = new Map();
+  function projInfo(p) {
+    const key = `${p.id}:${p.updated || 0}:${p.brandId || ''}`;
+    let c = projCache.get(key);
+    if (!c) {
+      const q = Folio.quality(p);
+      const box = document.createElement('div');
+      box.innerHTML = Folio.render(p);
+      const first = box.querySelector('.page');
+      c = { score: q.score, pages: q.stats.pages, page: first ? first.outerHTML : '' };
+      projCache.set(key, c);
+    }
+    return c;
+  }
+  const relTime = t => {
+    if (!t) return 'a while ago';
+    const m = (Date.now() - t) / 6e4;
+    if (m < 1) return 'just now';
+    if (m < 60) return `${Math.round(m)} min ago`;
+    if (m < 48 * 60) return `${Math.round(m / 60)}h ago`;
+    if (m < 60 * 24 * 30) return `${Math.round(m / 1440)} days ago`;
+    return new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  const storageUsed = () => { try { return (localStorage.getItem(STORE_KEY) || '').length * 2; } catch (e) { return 0; } };
+
   function projectsModal() {
-    const rows = Object.values(state.store.projects).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    const KIND = r => String(r.kind || 'Other').trim() || 'Other';
+    let q = '', kind = 'All', sort = store.get('folio.projSort', 'edited');
+    const all = () => Object.values(state.store.projects);
+    const card = r => {
+      const info = projInfo(r);
+      const t = Folio.applyTokens(r);
+      const lvl = info.score >= 85 ? 'good' : info.score >= 60 ? 'ok' : 'low';
+      const photo = (r.mockups || []).find(m => m.thumb);
+      const badges = [
+        r.id === state.store.current && '<span class="pbadge pbadge--on">Editing now</span>',
+        info.score >= 85 && '<span class="pbadge pbadge--good">Ready to sell</span>',
+        r.ai && '<span class="pbadge">AI-written</span>',
+        (r.mockups || []).length && `<span class="pbadge">${r.mockups.length} photo${r.mockups.length > 1 ? 's' : ''}</span>`,
+        (r.pins || []).length && `<span class="pbadge">${r.pins.length} pin${r.pins.length > 1 ? 's' : ''}</span>`,
+        (r.videos || []).length && `<span class="pbadge">${r.videos.length} video${r.videos.length > 1 ? 's' : ''}</span>`,
+        r.listing && r.listing.etsy && '<span class="pbadge">Etsy listing</span>'
+      ].filter(Boolean).join('');
+      return `<article class="projcard${r.id === state.store.current ? ' current' : ''}" data-pid="${esc(r.id)}">
+        <button type="button" class="projcard-thumb" data-pact="open" aria-label="Open ${esc(t.title || 'Untitled')}">
+          ${photo ? `<img src="${esc(photo.thumb)}" alt="" loading="lazy">` : `<span class="projcard-page" data-paper="${esc(r.paper)}"><span class="doc" style="${Folio.themeVars(r)}">${info.page}</span></span>`}
+          <span class="projcard-score" data-level="${lvl}" title="Quality score">${info.score}</span>
+        </button>
+        <div class="projcard-body">
+          <strong class="projcard-title">${esc(t.title || 'Untitled')}</strong>
+          <small>${esc(r.kind || 'Product')} · ${info.pages} page${info.pages === 1 ? '' : 's'} · ${esc(relTime(r.updated))}</small>
+          ${badges ? `<div class="pbadges">${badges}</div>` : ''}
+        </div>
+        <div class="projcard-acts">
+          <button type="button" class="btn small primary" data-pact="open">${r.id === state.store.current ? 'Keep editing' : 'Open'}</button>
+          <span class="projcard-more">
+            <button type="button" class="pact" data-pact="dup">Duplicate</button>
+            <button type="button" class="pact" data-pact="rename">Rename</button>
+            <button type="button" class="pact" data-pact="json" title="Download this product as a .json file">Save file</button>
+            <button type="button" class="pact pact--del" data-pact="del"${all().length < 2 ? ' disabled title="You need at least one product"' : ''}>Delete</button>
+          </span>
+        </div>
+      </article>`;
+    };
+    const draw = body => {
+      const rows = all();
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      const list = rows.filter(r => (kind === 'All' || KIND(r) === kind) && words.every(w => `${r.title} ${r.subtitle || ''} ${r.kind || ''} ${r.idea || ''}`.toLowerCase().includes(w)));
+      const by = {
+        edited: (a, b) => (b.updated || 0) - (a.updated || 0),
+        created: (a, b) => (b.created || 0) - (a.created || 0),
+        name: (a, b) => String(a.title).localeCompare(String(b.title)),
+        score: (a, b) => projInfo(b).score - projInfo(a).score,
+        pages: (a, b) => projInfo(b).pages - projInfo(a).pages
+      };
+      list.sort(by[sort] || by.edited);
+      const ready = rows.filter(r => projInfo(r).score >= 85).length;
+      const pages = rows.reduce((n, r) => n + projInfo(r).pages, 0);
+      $('#projStats', body).innerHTML = `<div><b>${rows.length}</b><span>product${rows.length === 1 ? '' : 's'}</span></div><div><b>${ready}</b><span>ready to sell</span></div><div><b>${pages.toLocaleString()}</b><span>pages made</span></div><div><b>${rows.reduce((n, r) => n + (r.mockups || []).length + (r.pins || []).length, 0)}</b><span>photos and pins</span></div>`;
+      const kinds = [...rows.reduce((m, r) => m.set(KIND(r), (m.get(KIND(r)) || 0) + 1), new Map())].sort((a, b) => b[1] - a[1]);
+      $('#projKinds', body).innerHTML = kinds.length > 1 ? [['All', rows.length], ...kinds].map(([k, n]) => `<button type="button" class="chip${k === kind ? ' on' : ''}" data-kind="${esc(k)}">${esc(k)} <span class="tpl-count">${n}</span></button>`).join('') : '';
+      $('#projGrid', body).innerHTML = `<button type="button" class="projcard projcard--new" data-pact="new"><span class="projcard-plus" aria-hidden="true">+</span><strong>New product</strong><small>Write it with AI or start from ${Folio.templates.length} starters</small></button>`
+        + (list.length ? list.map(card).join('') : '')
+        + (!list.length ? '<p class="empty proj-empty">No products match. Try another word or pick “All”.</p>' : '');
+      fitThumbs(body);
+    };
+    const fitThumbs = body => body.querySelectorAll('.projcard-page').forEach(el => {
+      const doc = el.firstElementChild;
+      const w = el.dataset.paper === 'a4' ? 794 : 816;
+      if (doc && el.clientWidth) doc.style.transform = `scale(${el.clientWidth / w})`;
+    });
+    const used = storageUsed();
     openModal('Your products', `
-      <ul class="proj-list">${rows.map(r => `<li data-pid="${r.id}" class="${r.id === state.store.current ? 'current' : ''}">
-        <span class="proj-meta"><strong>${esc(Folio.applyTokens(r).title || 'Untitled')}</strong>
-        <small>${esc(r.kind || '')} · ${esc(Folio.themes[r.theme].name)} · edited ${new Date(r.updated || Date.now()).toLocaleDateString()}</small></span>
-        <span class="proj-actions">
-          <button type="button" class="btn small" data-pact="open">Open</button>
-          <button type="button" class="btn ghost small" data-pact="dup">Duplicate</button>
-          <button type="button" class="btn ghost small danger" data-pact="del"${rows.length < 2 ? ' disabled' : ''}>Delete</button>
-        </span></li>`).join('')}</ul>
-      <div class="modal-foot">
-        <button type="button" class="btn" id="dlJson">Download .json backup</button>
-        <label class="btn ghost file-btn">Import .json file<input type="file" id="importFile" accept=".json,application/json"></label>
+      <div class="proj-stats" id="projStats"></div>
+      <div class="proj-tools">
+        <input type="search" id="projSearch" placeholder="Search your products" aria-label="Search your products">
+        <label class="trend-sort">Sort by <select id="projSort">${[['edited', 'Last edited'], ['created', 'Newest'], ['name', 'Name A–Z'], ['score', 'Quality score'], ['pages', 'Most pages']].map(([k, l]) => `<option value="${k}"${k === sort ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       </div>
-      <p class="hint">Products are saved automatically in this browser. Download a backup to move them to another device.</p>`, body => {
+      <div class="chips" id="projKinds"></div>
+      <div class="proj-grid" id="projGrid"></div>
+      <div class="proj-foot">
+        <div class="modal-foot">
+          <button type="button" class="btn" id="dlAll">Back up everything (.json)</button>
+          <label class="btn ghost file-btn">Import a .json file<input type="file" id="importFile" accept=".json,application/json"></label>
+        </div>
+        <p class="hint">Products save automatically in this browser${used ? ` (using ${(used / 1048576).toFixed(1)} MB of about 5 MB)` : ''}. Back up everything to move to another device or keep a safe copy. Import takes a single product or a full backup.</p>
+      </div>`, body => {
+      body.closest('.modal').classList.add('modal--wide');
+      draw(body);
+      const onResize = () => { if (!document.body.contains(body) || !$('#projGrid', body)) { window.removeEventListener('resize', onResize); return; } fitThumbs(body); };
+      window.addEventListener('resize', onResize);
+      $('#projSearch', body).addEventListener('input', e => { q = e.target.value; draw(body); });
+      $('#projSort', body).addEventListener('change', e => { sort = e.target.value; store.set('folio.projSort', sort); draw(body); });
       body.addEventListener('click', e => {
-        const btn = e.target.closest('[data-pact]');
-        if (btn) {
-          const id = btn.closest('li').dataset.pid;
-          const act = btn.dataset.pact;
-          if (act === 'open') { state.store.current = id; state.openBlocks.clear(); resetHistory(); save(); refreshAll(); closeModal(); }
-          if (act === 'dup') { const c = JSON.parse(JSON.stringify(state.store.projects[id])); c.title += ' (copy)'; addProject(c); closeModal(); toast('Duplicated'); }
-          if (act === 'del') {
-            if (btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Confirm delete'; return; }
-            delete state.store.projects[id];
-            if (state.store.current === id) state.store.current = Object.keys(state.store.projects)[0];
-            save(); refreshAll(); projectsModal(); toast('Deleted');
-          }
+        const kb = e.target.closest('[data-kind]');
+        if (kb) { kind = kb.dataset.kind; draw(body); return; }
+        if (e.target.id === 'dlAll') {
+          download(`viralize-studio-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'viralize-studio', version: 1, exported: new Date().toISOString(), projects: all(), brands: state.store.brands }, null, 2));
+          return;
         }
-        if (e.target.id === 'dlJson') download(`${slug(P().title)}.json`, JSON.stringify(P(), null, 2));
+        const btn = e.target.closest('[data-pact]');
+        if (!btn) return;
+        const act = btn.dataset.pact;
+        if (act === 'new') { newModal(); return; }
+        const cardEl = btn.closest('[data-pid]');
+        const id = cardEl.dataset.pid;
+        const r = state.store.projects[id];
+        if (act === 'open') { if (id !== state.store.current) { state.store.current = id; state.openBlocks.clear(); resetHistory(); save(); refreshAll(); } closeModal(); return; }
+        if (act === 'dup') {
+          const c = normalize(Object.assign(JSON.parse(JSON.stringify(r)), { id: uid(), title: `${r.title} (copy)`, created: Date.now(), updated: Date.now() }));
+          state.store.projects[c.id] = c; save(); draw(body); toast('Duplicated');
+          return;
+        }
+        if (act === 'json') { download(`${slug(Folio.applyTokens(r).title)}.json`, JSON.stringify(r, null, 2)); return; }
+        if (act === 'rename') {
+          const titleEl = cardEl.querySelector('.projcard-title');
+          titleEl.outerHTML = `<input type="text" class="projcard-rename" value="${esc(r.title)}" aria-label="Product name" maxlength="120">`;
+          const inp = cardEl.querySelector('.projcard-rename');
+          inp.focus(); inp.select();
+          let doneR = false;
+          const finish = ok => {
+            if (doneR) return; doneR = true;
+            const v = inp.value.trim();
+            if (ok && v && v !== r.title) {
+              if (id === state.store.current) checkpoint(true);
+              r.title = v; r.updated = Date.now();
+              if (id === state.store.current) { save(); renderPreview(); } else save();
+              toast('Renamed');
+            }
+            draw(body);
+          };
+          inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') finish(true); if (ev.key === 'Escape') { ev.stopPropagation(); finish(false); } });
+          inp.addEventListener('blur', () => finish(true));
+          return;
+        }
+        if (act === 'del') {
+          if (btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Click again to delete'; return; }
+          delete state.store.projects[id];
+          if (state.store.current === id) {
+            state.store.current = all().sort((a, b) => (b.updated || 0) - (a.updated || 0))[0].id;
+            state.openBlocks.clear(); resetHistory(); refreshAll();
+          }
+          save(); draw(body); toast('Deleted');
+        }
       });
       $('#importFile', body).addEventListener('change', e => {
         const f = e.target.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => { if (applyJson(r.result, true)) closeModal(); };
-        r.readAsText(f);
+        const rd = new FileReader();
+        rd.onload = () => {
+          let obj = null;
+          try { obj = JSON.parse(rd.result); } catch (err) { /* applyJson reports it */ }
+          if (obj && Array.isArray(obj.projects)) {
+            Object.assign(state.store.brands, obj.brands || {});
+            let n = 0;
+            obj.projects.forEach(x => {
+              if (!x || !Array.isArray(x.blocks)) return;
+              const same = state.store.projects[x.id];
+              if (same && JSON.stringify(same) === JSON.stringify(x)) return;
+              const c = normalize(Object.assign({}, x, { id: same || !x.id ? uid() : x.id }));
+              state.store.projects[c.id] = c; n++;
+            });
+            save(); draw(body); toast(n ? `Imported ${n} product${n > 1 ? 's' : ''}` : 'Everything in that backup is already here');
+          } else if (applyJson(rd.result, true)) closeModal();
+          e.target.value = '';
+        };
+        rd.readAsText(f);
       });
     });
   }

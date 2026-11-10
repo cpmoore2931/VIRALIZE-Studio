@@ -6,7 +6,23 @@
   "headers": [
     {
       "source": "/(js|css)/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
-  ]
+  ],
+  "functions": {
+    "api/write.js": {
+      "maxDuration": 60
+    },
+    "api/buyers.js": {
+      "maxDuration": 60
+    },
+    "api/research.js": {
+      "maxDuration": 60
+    }
+  }
 }
