@@ -18,6 +18,8 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
   callouts, FAQs, video links with QR codes, and call-to-action boxes
 - **Getting Started CRM guide**: a 9-chapter white-label onboarding guide (login, contacts,
   conversations, calendars, pipelines, automations, daily routine)
+- **ADHD-friendly daily planner**: one-page daily spread with one priority, energy and mood
+  check-ins, color-coded boxes, brain dump, daily basics and a done list; starter *One Thing a Day*
 - **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
