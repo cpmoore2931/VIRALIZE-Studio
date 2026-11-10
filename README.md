@@ -65,6 +65,12 @@ js/blocks.js          content block types
 js/templates.js       starter products
 js/render.js          product → pages
 js/quality.js         quality score
+js/brands.js          white-label brand kits and {{placeholders}}
+js/trading.js         candlestick charts, patterns, trading blocks
+js/training.js        CRM / software training blocks
+js/planner.js         ADHD-friendly planner pages
+assets/brands/        starter brand logos
+vercel.json           Vercel deploy settings
 js/app.js             editor, saving, AI edit, export
 docs/PRODUCT_SCHEMA.md product JSON format
 AGENTS.md             rules for AI assistants
