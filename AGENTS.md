@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → app.
+3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -27,6 +27,7 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/themes.js` | `Folio.themes`, cover styles, paper sizes | add a visual theme or paper size |
 | `js/brands.js` | White-label brand kits, brand fonts, `{{token}}` placeholders | add a starter brand, a brand font or a new placeholder |
 | `js/training.js` | Software/CRM training blocks: steps, screenshot, faq, video (QR), cta | change how-to guides and training pages |
+| `js/planner.js` | ADHD-friendly planner pages (`adhdday` daily spread) | change the daily planner page |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
 | `js/blocks.js` | `Folio.blocks` registry + text helpers | add a new kind of content (e.g. "recipe card") |
 | `js/templates.js` | Starter products in the "New" dialog | add a ready-made product |

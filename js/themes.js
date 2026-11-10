@@ -5,7 +5,8 @@
  * Fonts must also be added to the Google Fonts <link> in index.html.
  * Every value here becomes a CSS variable on the product (see render.js).
  * Optional: up / down (candle colors), mono (chart labels), displayStretch ('125%' = extended),
- * displayCase ('uppercase'), glowA / glowB (glow cover colors) — defaults apply if left out.
+ * displayCase ('uppercase'), glowA / glowB (glow cover colors), tint1–3 (soft box colors
+ * used by planner pages) — defaults apply if left out.
  */
 window.Folio = window.Folio || {};
 
@@ -92,6 +93,24 @@ Folio.themes = {
     accent: '#2F5D50',
     coverBg: '#2F5D50',
     coverInk: '#F2F5F1'
+  },
+  focus: {
+    name: 'Focus',
+    note: 'Calm, roomy, color-coded. ADHD-friendly planners.',
+    display: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+    body: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+    paper: '#FFFFFF',
+    ink: '#1E1B2E',
+    muted: '#6A6680',
+    rule: '#E4E1EE',
+    accent: '#5B4BDB',
+    tint1: '#EFEDFF',
+    tint2: '#E5F6EC',
+    tint3: '#FFF0E0',
+    glowA: '#DCD7FF',
+    glowB: '#CDEFDC',
+    coverBg: '#5B4BDB',
+    coverInk: '#FFFFFF'
   },
   terminal: {
     name: 'Terminal',

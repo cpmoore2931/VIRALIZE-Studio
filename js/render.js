@@ -31,6 +31,9 @@ Folio.themeVars = function (p) {
     `--p-display-case:${hf ? 'none' : (t.displayCase || 'none')}`,
     `--p-glow-a:${brand ? `color-mix(in srgb, ${brand.primary} 26%, transparent)` : (t.glowA || 'color-mix(in srgb, ' + accent + ' 22%, transparent)')}`,
     `--p-glow-b:${brand ? `color-mix(in srgb, ${brand.secondary || brand.primary} 22%, transparent)` : (t.glowB || 'color-mix(in srgb, ' + accent + ' 12%, transparent)')}`,
+    `--p-tint-1:${t.tint1 || `color-mix(in srgb, ${accent} 9%, ${t.paper})`}`,
+    `--p-tint-2:${t.tint2 || `color-mix(in srgb, ${accent} 6%, ${t.paper})`}`,
+    `--p-tint-3:${t.tint3 || `color-mix(in srgb, ${accent} 12%, ${t.paper})`}`,
     `--page-w:${size.w}`, `--page-h:${size.h}`
   ].join(';');
 };

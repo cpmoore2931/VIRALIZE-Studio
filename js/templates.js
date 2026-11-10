@@ -172,6 +172,49 @@ Folio.templates = [
   },
 
   {
+    key: 'adhdplanner',
+    blurb: 'ADHD-friendly daily planner: one priority, brain dump, done list.',
+    product: {
+      kind: 'Daily Planner',
+      title: 'One Thing a Day',
+      subtitle: 'An undated, ADHD-friendly daily planner for brains with too many tabs open',
+      author: 'Your Name',
+      brand: 'Your Studio',
+      year: '2026',
+      theme: 'focus',
+      accent: '',
+      cover: 'full',
+      paper: 'letter',
+      toc: false,
+      listing: {
+        price: '9',
+        audience: 'adults with ADHD, and anyone who finds normal planners overwhelming',
+        promise: 'Plan each day around one thing, see where your time actually goes, and notice everything you got done.',
+        platform: 'Etsy'
+      },
+      blocks: [
+        { type: 'chapter', title: 'How this planner works', kicker: 'Read me · 2 minutes', intro: 'Most planners ask for a perfect list. This one asks for **one thing**. Everything else on the page is optional.' },
+        { type: 'bullets', title: 'Four rules', items: ['**Pick one thing.** If it is the only thing you do, the day still counts.', '**Shrink the first step** until it takes two minutes. Start there.', '**Guess, then add half again.** Time blindness is real. A "20-minute" task gets a 30-minute block.', '**Missed a day? Skip the page.** It is undated on purpose. No catching up, no guilt.'] },
+        { type: 'callout', label: 'Use the done list', text: 'Write down what you did, not just what you planned. Answered that email? Drank water? Got out of bed on a hard day? It counts. Seeing it written down builds momentum.' },
+        { type: 'table', title: 'Your dopamine menu', headers: 'Quick boost (5 min) | Bigger reset (20 min) | Treat (save for after)', rows: ['Dance to one song | Walk around the block | An episode of a show', 'Cold water on your face | Shower with a good playlist | Coffee somewhere new', 'Stretch next to your desk | Tidy one surface with a podcast on | 30 minutes of a game', ' | | ', ' | | '] },
+        { type: 'checklist', title: 'When I get stuck', items: ['Make the task smaller: what is the first two-minute step?', 'Body double: call a friend or join an online focus room', 'Set a 10-minute timer. Stop when it rings, if you want to.', 'Move: a different room, a café, standing up', 'Pick something from the dopamine menu, then try again'] },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'adhdday', title: 'Today' },
+        { type: 'chapter', title: 'Weekly reset', kicker: '20 minutes, once a week' },
+        { type: 'checklist', title: 'Reset checklist', items: ['Empty your bag, pockets and desk', 'Look at next week\'s calendar and circle the busy days', 'Move anything still undone to a brain dump page', 'Refill meds and buy groceries for three easy meals', 'Pick next week\'s one big thing'] },
+        { type: 'prompts', title: 'Look back, kindly', items: ['What went better than I expected?', 'What drained me, and can I make it smaller next week?'], lines: 3 },
+        { type: 'habit', title: 'Monthly basics', habits: ['Took meds', 'Drank water', 'Moved my body', 'Outside 10 minutes', 'Phone away at bedtime'] },
+        { type: 'notes', title: 'Brain dump overflow', style: 'dotted' }
+      ]
+    }
+  },
+
+  {
     key: 'workbook',
     blurb: 'Guided prompts and exercises with writing space.',
     product: {

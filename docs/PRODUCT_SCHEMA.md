@@ -34,7 +34,7 @@ what you get from "Download .json backup".
 
 | Field | Values |
 | --- | --- |
-| `theme` | `editorial`, `luxe`, `modern`, `soft`, `nordic`, `terminal`, `ledger` |
+| `theme` | `focus`, `editorial`, `luxe`, `modern`, `soft`, `nordic`, `terminal`, `ledger` |
 | `cover` | `classic`, `full`, `frame` |
 | `paper` | `letter`, `a4` |
 | `accent` | hex color like `#8C3B1F`, or `""` for the theme default |
@@ -69,6 +69,7 @@ what you get from "Download .json backup".
 | `faq` | `title`, `items[]` ("Question \| Answer") | flows |
 | `video` | `title`, `url`, `note`, `length` (shows a QR code) | flows |
 | `cta` | `title`, `text`, `button`, `url` | flows |
+| `adhdday` | `title`, `oneThing`, `basics[]`, `water` (number), `startHour`, `endHour` (numbers) | full page |
 
 Placeholders `{{platform}}`, `{{brand}}`, `{{login}}`, `{{website}}`, `{{email}}`, `{{phone}}`
 work in any text and are filled from the product's brand kit.
