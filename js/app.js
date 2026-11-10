@@ -474,28 +474,117 @@
     $('#modal').hidden = false;
     if (onReady) onReady($('#modalBody'));
   }
-  function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; }
+  function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; document.querySelector('.modal').classList.remove('modal--wide'); }
+
+  /* ---------- trends (data in js/trends.js) ---------- */
+  const TRENDS = (Folio.trends && Folio.trends.items) || [];
+  const trendFor = key => TRENDS.filter(x => x.template === key).sort((a, b) => b.score - a.score)[0] || null;
+  const fmtNum = n => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n);
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const latest = x => x.series[x.series.length - 1];
+  const latestMonth = x => MON[(x.months[x.months.length - 1] || 1) - 1];
+  const STATUS = { rising: 'Rising', season: 'Peak season ahead', steady: 'Steady', cooling: 'Cooling' };
+  function trendBadge(x) {
+    if (!x) return '';
+    if (x.status === 'rising') return `<span class="tbadge tbadge--rising">Rising +${x.change}%</span>`;
+    if (x.status === 'season') return `<span class="tbadge tbadge--season">Peaks in ${esc(x.peak)}</span>`;
+    return '';
+  }
+  function sparkline(series, w = 120, h = 34) {
+    const max = Math.max(...series, 1), min = Math.min(...series);
+    const pts = series.map((v, i) => [i / (series.length - 1) * (w - 6) + 3, h - 4 - (v - min) / ((max - min) || 1) * (h - 10)]);
+    const line = pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ');
+    const last = pts[pts.length - 1];
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
+      <polygon points="3,${h} ${line} ${w - 3},${h}" class="spark-area"/><polyline points="${line}" class="spark-line"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" class="spark-dot"/></svg>`;
+  }
+  function startTemplate(key, rename) {
+    const t = Folio.templates.find(x => x.key === key);
+    if (!t) return;
+    const prod = JSON.parse(JSON.stringify(t.product));
+    if (rename) { prod.title = rename; prod.kind = rename; }
+    addProject(prod);
+    closeModal();
+    toast(rename ? `Started "${rename}" from the ${t.product.kind} starter. Tailor the pages to fit.` : 'New product created');
+  }
+
+  function trendsModal() {
+    const meta = (Folio.trends && Folio.trends.meta) || {};
+    let filter = 'all', sort = 'score';
+    const action = x => x.template
+      ? `<button type="button" class="btn small primary" data-make="${esc(x.template)}">Make this</button>`
+      : x.near ? `<button type="button" class="btn small" data-make="${esc(x.near)}" data-rename="${esc(x.label)}">Start from ${esc((Folio.templates.find(t => t.key === x.near) || { product: { kind: '' } }).product.kind)}</button>`
+        : '<span class="trend-idea">Idea for a new starter</span>';
+    const pick = TRENDS.filter(x => x.status === 'rising' || x.status === 'season').slice(0, 6);
+    const card = x => `<article class="tcard">
+        <div class="tcard-top"><strong>${esc(x.label)}</strong><span class="tpill tpill--${x.status}">${STATUS[x.status]}</span></div>
+        ${sparkline(x.series, 220, 46)}
+        <div class="tcard-nums"><span><b>${fmtNum(latest(x))}</b> searches in ${latestMonth(x)}</span><span class="${x.change >= 0 ? 'up' : 'down'}">${x.change >= 0 ? '+' : ''}${x.change}% in 3 mo</span></div>
+        <p>${esc(x.why)}</p>${action(x)}</article>`;
+    const row = x => `<tr>
+        <td><strong>${esc(x.label)}</strong><small>${esc(x.kw)}</small></td>
+        <td>${sparkline(x.series)}</td>
+        <td class="num">${fmtNum(latest(x))}<small>avg ${fmtNum(x.vol)}</small></td>
+        <td class="num ${x.change >= 0 ? 'up' : 'down'}">${x.change >= 0 ? '+' : ''}${x.change}%</td>
+        <td>${esc(x.peak)}</td>
+        <td><span class="tpill tpill--${x.status}">${STATUS[x.status]}</span></td>
+        <td class="cap">${esc(x.comp)}</td>
+        <td>${action(x)}</td></tr>`;
+    const draw = body => {
+      let list = TRENDS.filter(x => filter === 'all' || (filter === 'app' ? !!x.template : filter === 'ideas' ? !x.template : x.status === filter));
+      list = list.slice().sort((a, b) => sort === 'vol' ? latest(b) - latest(a) : sort === 'change' ? b.change - a.change : b.score - a.score);
+      $('#trendRows', body).innerHTML = list.map(row).join('');
+      body.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf === filter));
+    };
+    openModal('Market trends', `
+      <p class="hint trend-meta">${esc(meta.source || '')} ${meta.range ? `Data: ${esc(meta.range)}.` : ''} Snapshot taken ${esc(meta.updated || '')}.</p>
+      <section class="group"><h3 class="group-title">Make these now</h3><div class="tcards">${pick.map(card).join('')}</div></section>
+      <section class="group">
+        <div class="trend-tools">
+          <div class="chips">${[['all', 'All'], ['rising', 'Rising'], ['season', 'Peak season ahead'], ['app', 'In the app'], ['ideas', 'New ideas']].map(([k, l]) => `<button type="button" class="chip" data-tf="${k}">${l}</button>`).join('')}</div>
+          <label class="trend-sort">Sort by <select id="trendSort"><option value="score">Opportunity</option><option value="vol">Searches</option><option value="change">Growth</option></select></label>
+        </div>
+        <div class="trend-table"><table><thead><tr><th>Product</th><th>Last 12 months</th><th class="num">Searches (latest month)</th><th class="num">3-mo change</th><th>Peak</th><th>Status</th><th>Ads competition</th><th></th></tr></thead><tbody id="trendRows"></tbody></table></div>
+      </section>`, body => {
+      body.closest('.modal').classList.add('modal--wide');
+      draw(body);
+      body.addEventListener('click', e => {
+        const f = e.target.closest('[data-tf]');
+        if (f) { filter = f.dataset.tf; draw(body); return; }
+        const m = e.target.closest('[data-make]');
+        if (m) startTemplate(m.dataset.make, m.dataset.rename);
+      });
+      $('#trendSort', body).addEventListener('change', e => { sort = e.target.value; draw(body); });
+    });
+  }
 
   function newModal() {
     const ORDER = ['Planners', 'Mind & wellness', 'Health & fitness', 'Home & food', 'Business & money', 'Guides & ebooks', 'Art & paper', 'Start from scratch'];
     const rank = c => (ORDER.indexOf(c) + 1) || 99;
-    const cats = ['All', ...[...new Set(Folio.templates.map(t => t.cat))].sort((a, b) => rank(a) - rank(b))];
+    const cats = ['All', ...(TRENDS.length ? ['Trending'] : []), ...[...new Set(Folio.templates.map(t => t.cat))].sort((a, b) => rank(a) - rank(b))];
     let cat = 'All', q = '';
     const card = t => {
       const th = Folio.themes[t.product.theme] || Folio.themes.editorial;
       const bp = t.product.brandPreset && Folio.brandPresets[t.product.brandPreset];
       const title = String(t.product.title).replace('{{platform}}', bp ? bp.platformName : 'your CRM');
+      const tr = trendFor(t.key);
       const art = t.image
-        ? `<span class="tpl-cover tpl-cover--img"><img src="${esc(t.image)}" alt="${esc(title)} product photo" loading="lazy"></span>`
-        : `<span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}</span>`;
+        ? `<span class="tpl-cover tpl-cover--img"><img src="${esc(t.image)}" alt="${esc(title)} product photo" loading="lazy">${trendBadge(tr)}</span>`
+        : `<span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}${trendBadge(tr)}</span>`;
       return `<button type="button" class="tpl" data-tpl="${t.key}">${art}
-        <strong>${esc(t.product.kind)}</strong><small>${esc(t.blurb)}</small></button>`;
+        <strong>${esc(t.product.kind)}</strong><small>${tr && cat === 'Trending' ? `${fmtNum(latest(tr))} searches in ${latestMonth(tr)}. ${esc(tr.why)}` : esc(t.blurb)}</small></button>`;
     };
     const draw = body => {
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-      const hit = t => (cat === 'All' || t.cat === cat) &&
-        words.every(w => `${t.product.kind} ${t.product.title} ${t.blurb} ${t.cat}`.toLowerCase().includes(w));
-      const groups = cats.filter(c => c !== 'All').map(c => [c, Folio.templates.filter(t => t.cat === c && hit(t))]).filter(([, l]) => l.length);
+      const match = t => words.every(w => `${t.product.kind} ${t.product.title} ${t.blurb} ${t.cat}`.toLowerCase().includes(w));
+      let groups;
+      if (cat === 'Trending') {
+        const hot = Folio.templates.map(t => [t, trendFor(t.key)]).filter(([t, x]) => x && match(t)).sort((a, b) => b[1].score - a[1].score).map(([t]) => t);
+        groups = hot.length ? [['Trending now, ranked by opportunity', hot]] : [];
+      } else {
+        groups = cats.filter(c => c !== 'All' && c !== 'Trending').map(c => [c, Folio.templates.filter(t => t.cat === c && (cat === 'All' || t.cat === cat) && match(t))]).filter(([, l]) => l.length);
+      }
       $('#tplGroups', body).innerHTML = groups.length
         ? groups.map(([c, l]) => `<section class="tpl-group"><h3 class="group-title">${esc(c)} <span class="tpl-count">${l.length}</span></h3><div class="tpl-grid">${l.map(card).join('')}</div></section>`).join('')
         : '<p class="empty">No starters match. Try another word, or start from a blank product.</p>';
@@ -504,7 +593,7 @@
     openModal(`Start a new product`, `
       <div class="tpl-tools">
         <input type="search" id="tplSearch" placeholder="Search ${Folio.templates.length} starters, e.g. planner, budget, wall art" aria-label="Search starters">
-        <div class="chips">${cats.map(c => `<button type="button" class="chip" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+        <div class="chips">${cats.map(c => `<button type="button" class="chip${c === 'Trending' ? ' chip--hot' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
       </div>
       <div id="tplGroups"></div>`, body => {
       draw(body);
@@ -513,9 +602,7 @@
         const c = e.target.closest('[data-cat]');
         if (c) { cat = c.dataset.cat; draw(body); return; }
         const b = e.target.closest('[data-tpl]');
-        if (!b) return;
-        addProject(JSON.parse(JSON.stringify(Folio.templates.find(t => t.key === b.dataset.tpl).product)));
-        closeModal(); toast('New product created');
+        if (b) startTemplate(b.dataset.tpl);
       });
       setTimeout(() => { const i = $('#tplSearch'); if (i) i.focus(); }, 50);
     });
@@ -717,6 +804,7 @@ ${JSON.stringify(clean, null, 2)}`;
     $('#panelBody').addEventListener('click', onPanelClick);
     $('#btnNew').addEventListener('click', newModal);
     $('#btnProjects').addEventListener('click', projectsModal);
+    $('#btnTrends').addEventListener('click', trendsModal);
     $('#btnAI').addEventListener('click', aiModal);
     $('#btnPdf').addEventListener('click', exportPdf);
     $('#modalClose').addEventListener('click', closeModal);

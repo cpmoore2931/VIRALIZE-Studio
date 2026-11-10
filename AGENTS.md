@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → library → art → templates-library → app.
+3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → planner → library → art → templates-library → trends → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -31,6 +31,7 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/library.js` | Lifestyle pages: monthly, yearly, mealplan, cards, recipe, savings, wallart, paper, letterhead, labels | add or change calendars, cards, wall art, papers |
 | `js/art.js` | Generated vector art: floral prints, abstract collage, coloring pages (mandala, geometric, flowers), line icon set (`Folio.art.icons`) | add an icon, a palette or a new art generator |
 | `js/templates-library.js` | ~46 ready-to-sell starters with categories (planners, trackers, journals, money, art) | add a starter to the New dialog |
+| `js/trends.js` | Market data snapshot (Google search demand + Etsy sample, pulled with Treg) for the Trends view and Trending starters | refresh trend data |
 | `assets/covers/` | Product photos shown on starter cards in New (set `image` on a template) | add a starter's cover photo |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
 | `js/blocks.js` | `Folio.blocks` registry + text helpers | add a new kind of content (e.g. "recipe card") |
