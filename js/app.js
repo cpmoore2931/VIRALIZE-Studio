@@ -3,7 +3,8 @@
  *
  * Data flow:  state.product  →  Folio.render()  →  preview
  *             editor inputs  →  update state.product  →  save + re-render preview
- * Projects are saved in the browser (localStorage key "folio.v1").
+ * Projects and brand kits are saved in the browser (localStorage key "folio.v1").
+ * Undo/redo keeps up to 60 snapshots of the current product.
  */
 (function () {
   const { esc, uid, list } = Folio.util;
@@ -11,9 +12,11 @@
   const STORE_KEY = 'folio.v1';
 
   const state = {
-    store: { projects: {}, current: null },
+    store: { projects: {}, brands: {}, current: null },
     tab: 'design',
-    openBlocks: new Set()
+    openBlocks: new Set(),
+    lastBid: null,
+    undo: [], redo: [], lastCheckpoint: 0
   };
   const P = () => state.store.projects[state.store.current];
 
@@ -33,9 +36,50 @@
     P().updated = Date.now();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(state.store)); } catch (e) { /* ignore */ }
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state.store)); }
+      catch (e) { toast('Browser storage is full. Download a .json backup, then delete old products or large images.'); }
     }, 250);
   }
+
+  /* ---------- undo / redo ---------- */
+  function checkpoint(force) {
+    const now = Date.now();
+    if (force || now - state.lastCheckpoint > 900) {
+      state.undo.push(snapshot());
+      if (state.undo.length > 60) state.undo.shift();
+      state.redo = [];
+    }
+    state.lastCheckpoint = now;
+    syncHistory();
+  }
+  function travel(from, to) {
+    if (!from.length) return;
+    to.push(snapshot());
+    const snap = JSON.parse(from.pop());
+    state.store.projects[snap.p.id] = snap.p;
+    state.store.current = snap.p.id;
+    state.store.brands = snap.brands;
+    Folio.brands = state.store.brands;
+    state.lastCheckpoint = 0;
+    save(); refreshAll(); syncHistory();
+  }
+  /* A snapshot holds the product and the brand kits, since brand edits change the product too. */
+  function snapshot() { return JSON.stringify({ p: P(), brands: state.store.brands }); }
+  function syncHistory() {
+    $('#btnUndo').disabled = !state.undo.length;
+    $('#btnRedo').disabled = !state.redo.length;
+  }
+  function resetHistory() { state.undo = []; state.redo = []; syncHistory(); }
+
+  /* ---------- brands ---------- */
+  function ensureBrand(presetKey) {
+    const found = Object.values(state.store.brands).find(b => b.preset === presetKey);
+    if (found) return found.id;
+    const b = Object.assign(JSON.parse(JSON.stringify(Folio.brandPresets[presetKey] || Folio.brandPresets.blank)), { id: uid(), preset: presetKey });
+    state.store.brands[b.id] = b;
+    return b.id;
+  }
+  const B = () => state.store.brands[P().brandId];
 
   function normalize(p) {
     const tpl = Folio.templates.find(t => t.key === 'blank').product;
@@ -51,7 +95,9 @@
   }
 
   function addProject(p) {
+    if (p.brandPreset && !p.brandId) p.brandId = ensureBrand(p.brandPreset);
     const prod = normalize(Object.assign({}, p, { id: uid(), created: Date.now() }));
+    resetHistory();
     state.store.projects[prod.id] = prod;
     state.store.current = prod.id;
     state.openBlocks.clear();
@@ -69,7 +115,7 @@
     const p = P();
     $('#stageInner').innerHTML = `<div class="doc" id="doc" style="${Folio.themeVars(p)}">${Folio.render(p)}</div>`;
     fitPreview();
-    $('#projectName').textContent = p.title || 'Untitled product';
+    $('#projectName').textContent = Folio.applyTokens(p).title || 'Untitled product';
     updateScore();
   }
   function fitPreview() {
@@ -99,8 +145,17 @@
       const v = f.kind === 'list' ? list(value).join('\n') : (value || '');
       input = `<textarea id="${id}" data-path="${path}" data-kind="${f.kind}" rows="${f.kind === 'list' ? 5 : 4}">${esc(v)}</textarea>`;
     } else if (f.kind === 'select') {
-      input = `<select id="${id}" data-path="${path}">${Object.entries(f.options).map(([k, l]) =>
+      const opts = f.options === 'brandFonts'
+        ? Object.fromEntries(Object.entries(Folio.brandFonts).map(([k, v]) => [k, v.name])) : f.options;
+      input = `<select id="${id}" data-path="${path}">${Object.entries(opts).map(([k, l]) =>
         `<option value="${k}"${k === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    } else if (f.kind === 'color') {
+      input = `<span class="color-row"><input type="color" id="${id}" data-path="${path}" value="${esc(value || '#000000')}"><code>${esc(value || '')}</code></span>`;
+    } else if (f.kind === 'image') {
+      return `<div class="field"><span>${esc(f.label)}</span>
+        <div class="img-field">${value ? `<img src="${esc(value)}" alt="">` : '<span class="img-empty">No image</span>'}
+          <span class="img-actions"><label class="btn small file-btn">${value ? 'Replace' : 'Upload'}<input type="file" accept="image/*" id="${id}" data-path="${path}" data-kind="image" data-max="${f.max || 1200}"></label>
+          ${value ? `<button type="button" class="btn ghost small" data-act="clear-image" data-path="${path}">Remove</button>` : ''}</span></div></div>`;
     } else if (f.kind === 'checkbox') {
       return `<label class="check" for="${id}"><input type="checkbox" id="${id}" data-path="${path}" data-kind="checkbox"${value ? ' checked' : ''}> ${esc(f.label)}</label>`;
     } else {
@@ -113,7 +168,8 @@
     const p = P();
     const parts = path.split('.');
     let obj = p;
-    if (parts[0] === 'b') {
+    if (parts[0] === 'brand') { obj = B(); parts.shift(); }
+    else if (parts[0] === 'b') {
       obj = p.blocks.find(b => b.id === parts[1]);
       parts.splice(0, 2);
     }
@@ -126,7 +182,7 @@
   function renderPanel() {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === state.tab));
     const body = $('#panelBody');
-    body.innerHTML = ({ design: designTab, content: contentTab, sell: sellTab, quality: qualityTab })[state.tab]();
+    body.innerHTML = ({ design: designTab, content: contentTab, brand: brandTab, sell: sellTab, quality: qualityTab })[state.tab]();
   }
 
   function designTab() {
@@ -161,6 +217,36 @@
         </div>
         ${field({ label: 'Paper size', kind: 'select', options: Object.fromEntries(Object.entries(Folio.paperSizes).map(([k, v]) => [k, v.name])) }, p.paper, 'paper')}
         ${field({ label: 'Include table of contents', kind: 'checkbox' }, p.toc !== false, 'toc')}
+        ${field({ label: 'Watermark on inside pages (e.g. SAMPLE for a free preview; leave empty for none)', kind: 'text' }, p.watermark || '', 'watermark')}
+      </section>`;
+  }
+
+  function brandTab() {
+    const p = P();
+    const brands = Object.values(state.store.brands);
+    const b = B();
+    const presetBtns = Object.entries(Folio.brandPresets).map(([k, v]) =>
+      `<button type="button" class="btn small" data-new-brand="${k}">${k === 'blank' ? '+ New blank brand' : `${brands.some(x => x.preset === k) ? 'Use' : '+'} ${esc(v.name)}`}</button>`).join('');
+    const tokens = ['platform', 'brand', 'login', 'website', 'email', 'phone'].map(t => `<button type="button" class="token" data-token="{{${t}}}">{{${t}}}</button>`).join('');
+    return `
+      <section class="group">
+        <h3 class="group-title">White label</h3>
+        <p class="hint">Put your client's or your own brand on this product: logo, colors, fonts and contact details. Save a brand once and reuse it on any product.</p>
+        <label class="field" for="brandPick"><span>Brand on this product</span>
+          <select id="brandPick"><option value="">No brand (use the theme)</option>
+          ${brands.map(x => `<option value="${x.id}"${x.id === p.brandId ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+        <div class="btn-row">${presetBtns}</div>
+      </section>
+      ${b ? `<section class="group">
+        <div class="group-head"><h3 class="group-title">Edit ${esc(b.name)}</h3>
+          <button type="button" class="btn ghost small danger" id="delBrand">Delete brand</button></div>
+        <p class="hint">Changes apply to every product that uses this brand.</p>
+        ${Folio.brandFields.map(f => field(f, b[f.key], `brand.${f.key}`)).join('')}
+      </section>` : ''}
+      <section class="group">
+        <h3 class="group-title">Placeholders</h3>
+        <p class="hint">Type these anywhere in your text. They fill in from the brand, so one guide can be rebranded for any client. Click to copy.</p>
+        <div class="tokens">${tokens}</div>
       </section>`;
   }
 
@@ -190,15 +276,17 @@
     }).join('');
     const opts = Object.entries(Folio.blocks).map(([k, d]) => `<option value="${k}">${esc(d.label)}</option>`).join('');
     return `
-      <p class="hint">Click any block in the preview to jump to it. Text supports **bold** and *italic*.</p>
+      <p class="hint">Click any block in the preview to jump to it. Text supports **bold**, *italic* and placeholders like {{platform}} (see Brand).</p>
       <div class="blist">${cards || '<p class="empty">No blocks yet. Add your first chapter below.</p>'}</div>
       <div class="add-row">
         <select id="addType" aria-label="Block type">${opts}</select>
         <button type="button" class="btn primary" id="addBlock">Add block</button>
-      </div>`;
+      </div>
+      <p class="hint add-hint">${state.lastBid && p.blocks.some(b => b.id === state.lastBid) ? 'New blocks go below the block you opened last.' : 'New blocks go at the end.'}</p>`;
   }
 
-  function listingText(p) {
+  function listingText(raw) {
+    const p = Folio.applyTokens(raw);
     const L = p.listing || {};
     const s = Folio.stats(p);
     const chapters = p.blocks.filter(b => b.type === 'chapter').map(b => `• ${b.title}`);
@@ -209,7 +297,12 @@
       count('weekly') && `${count('weekly')} weekly planner spread${count('weekly') > 1 ? 's' : ''}`,
       count('habit') && 'a monthly habit tracker',
       count('table') && `${count('table')} reference table${count('table') > 1 ? 's' : ''}`,
-      count('notes') && `${count('notes')} notes page${count('notes') > 1 ? 's' : ''}`
+      count('notes') && `${count('notes')} notes page${count('notes') > 1 ? 's' : ''}`,
+      count('steps') && `${count('steps')} step-by-step walkthrough${count('steps') > 1 ? 's' : ''}`,
+      count('screenshot') && `${count('screenshot')} annotated screenshot${count('screenshot') > 1 ? 's' : ''}`,
+      count('video') && `${count('video')} video lesson${count('video') > 1 ? 's' : ''} (scan the QR code)`,
+      count('candles') && `${count('candles')} candlestick chart${count('candles') > 1 ? 's' : ''}`,
+      count('journal') && `${count('journal')} trade journal page${count('journal') > 1 ? 's' : ''}`
     ].filter(Boolean);
     const paper = Folio.paperSizes[p.paper].name.split(' (')[0];
     const price = String(L.price || '').trim();
@@ -270,9 +363,11 @@
   /* ---------- panel events ---------- */
   function onPanelInput(e) {
     const el = e.target;
-    if (!el.dataset.path) return;
+    if (!el.dataset.path || el.type === 'file') return;
     const kind = el.dataset.kind;
+    checkpoint();
     setPath(el.dataset.path, kind === 'checkbox' ? el.checked : el.value, kind);
+    if (el.type === 'color' && el.nextElementSibling && el.nextElementSibling.tagName === 'CODE') el.nextElementSibling.textContent = el.value;
     save();
     schedulePreview();
     const card = el.closest('.bcard');
@@ -282,16 +377,64 @@
     }
   }
 
+  /* Read an uploaded image, shrink it, and store it as a data URL. */
+  function onImageFile(el) {
+    const f = el.files && el.files[0];
+    if (!f) return;
+    const max = Number(el.dataset.max) || 1200;
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const png = /png|svg|gif|webp/.test(f.type) && max <= 800;
+        checkpoint(true);
+        setPath(el.dataset.path, c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.86));
+        save(); renderPanel(); renderPreview(); toast('Image added');
+      };
+      img.onerror = () => toast('That file could not be read as an image.');
+      img.src = r.result;
+    };
+    r.readAsDataURL(f);
+  }
+
   function onPanelClick(e) {
     const p = P();
     const themeBtn = e.target.closest('[data-theme-key]');
-    if (themeBtn) { p.theme = themeBtn.dataset.themeKey; p.accent = ''; save(); renderPanel(); renderPreview(); return; }
-    if (e.target.id === 'resetAccent') { p.accent = ''; save(); renderPanel(); renderPreview(); return; }
+    if (themeBtn) { checkpoint(true); p.theme = themeBtn.dataset.themeKey; p.accent = ''; save(); renderPanel(); renderPreview(); return; }
+    if (e.target.id === 'resetAccent') { checkpoint(true); p.accent = ''; save(); renderPanel(); renderPreview(); return; }
+    const nb = e.target.closest('[data-new-brand]');
+    if (nb) {
+      checkpoint(true);
+      const key = nb.dataset.newBrand;
+      const id = key === 'blank' ? null : Object.values(state.store.brands).find(x => x.preset === key)?.id;
+      p.brandId = id || (() => { const b = Object.assign(JSON.parse(JSON.stringify(Folio.brandPresets[key])), { id: uid(), preset: key === 'blank' ? undefined : key }); state.store.brands[b.id] = b; return b.id; })();
+      save(); renderPanel(); renderPreview(); toast(id ? 'Brand applied' : 'Brand created');
+      return;
+    }
+    if (e.target.id === 'delBrand') {
+      if (e.target.dataset.confirm !== '1') { e.target.dataset.confirm = '1'; e.target.textContent = 'Click again to delete'; return; }
+      const id = p.brandId;
+      delete state.store.brands[id];
+      Object.values(state.store.projects).forEach(x => { if (x.brandId === id) x.brandId = ''; });
+      save(); renderPanel(); renderPreview(); toast('Brand deleted');
+      return;
+    }
+    const tok = e.target.closest('[data-token]');
+    if (tok) { copy(tok.dataset.token, `Copied ${tok.dataset.token}`); return; }
+    const clr = e.target.closest('[data-act="clear-image"]');
+    if (clr) { checkpoint(true); setPath(clr.dataset.path, ''); save(); renderPanel(); renderPreview(); return; }
     if (e.target.id === 'addBlock') {
+      checkpoint(true);
       const type = $('#addType').value;
       const b = Object.assign({ type, id: uid() }, JSON.parse(JSON.stringify(Folio.blocks[type].defaults)));
-      p.blocks.push(b);
+      const at = p.blocks.findIndex(x => x.id === state.lastBid);
+      if (at >= 0) p.blocks.splice(at + 1, 0, b); else p.blocks.push(b);
       state.openBlocks.add(b.id);
+      state.lastBid = b.id;
       save(); renderPanel(); renderPreview();
       const card = document.querySelector(`[data-bid="${b.id}"]`);
       if (card) card.scrollIntoView({ block: 'center' });
@@ -305,7 +448,11 @@
     const id = card.dataset.bid;
     const i = p.blocks.findIndex(b => b.id === id);
     const act = actBtn.dataset.act;
-    if (act === 'toggle') { state.openBlocks.has(id) ? state.openBlocks.delete(id) : state.openBlocks.add(id); renderPanel(); return; }
+    if (act === 'toggle') {
+      if (state.openBlocks.has(id)) state.openBlocks.delete(id); else { state.openBlocks.add(id); state.lastBid = id; }
+      renderPanel(); return;
+    }
+    if (act !== 'del' || actBtn.dataset.confirm === '1') checkpoint(true);
     if (act === 'up' && i > 0) [p.blocks[i - 1], p.blocks[i]] = [p.blocks[i], p.blocks[i - 1]];
     if (act === 'down' && i < p.blocks.length - 1) [p.blocks[i + 1], p.blocks[i]] = [p.blocks[i], p.blocks[i + 1]];
     if (act === 'dup') {
@@ -331,8 +478,10 @@
   function newModal() {
     openModal('Start a new product', `<div class="tpl-grid">${Folio.templates.map(t => {
       const th = Folio.themes[t.product.theme];
+      const bp = t.product.brandPreset && Folio.brandPresets[t.product.brandPreset];
+      const title = String(t.product.title).replace('{{platform}}', bp ? bp.platformName : 'your CRM');
       return `<button type="button" class="tpl" data-tpl="${t.key}">
-        <span class="tpl-cover" style="background:${th.coverBg};color:${th.coverInk};font-family:${th.display}">${esc(t.product.title)}</span>
+        <span class="tpl-cover" style="background:${bp ? bp.dark : th.coverBg};color:${bp ? '#fff' : th.coverInk};font-family:${th.display}">${esc(title)}</span>
         <strong>${esc(t.product.kind)}</strong><small>${esc(t.blurb)}</small></button>`;
     }).join('')}</div>`, body => {
       body.addEventListener('click', e => {
@@ -348,7 +497,7 @@
     const rows = Object.values(state.store.projects).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     openModal('Your products', `
       <ul class="proj-list">${rows.map(r => `<li data-pid="${r.id}" class="${r.id === state.store.current ? 'current' : ''}">
-        <span class="proj-meta"><strong>${esc(r.title || 'Untitled')}</strong>
+        <span class="proj-meta"><strong>${esc(Folio.applyTokens(r).title || 'Untitled')}</strong>
         <small>${esc(r.kind || '')} · ${esc(Folio.themes[r.theme].name)} · edited ${new Date(r.updated || Date.now()).toLocaleDateString()}</small></span>
         <span class="proj-actions">
           <button type="button" class="btn small" data-pact="open">Open</button>
@@ -365,7 +514,7 @@
         if (btn) {
           const id = btn.closest('li').dataset.pid;
           const act = btn.dataset.pact;
-          if (act === 'open') { state.store.current = id; state.openBlocks.clear(); save(); refreshAll(); closeModal(); }
+          if (act === 'open') { state.store.current = id; state.openBlocks.clear(); resetHistory(); save(); refreshAll(); closeModal(); }
           if (act === 'dup') { const c = JSON.parse(JSON.stringify(state.store.projects[id])); c.title += ' (copy)'; addProject(c); closeModal(); toast('Duplicated'); }
           if (act === 'del') {
             if (btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.textContent = 'Confirm delete'; return; }
@@ -390,6 +539,8 @@
       `- "${k}" (${d.label}): ${d.fields.map(f => `${f.key}${f.kind === 'list' ? ' (array of strings)' : f.kind === 'number' ? ' (number)' : f.kind === 'select' ? ` (one of: ${Object.keys(f.options).join(', ')})` : ''}`).join(', ') || 'no fields'}`).join('\n');
     const clean = JSON.parse(JSON.stringify(p));
     delete clean.created; delete clean.updated;
+    /* Images are too large for a chat; the AI sees a marker and we restore them on apply. */
+    clean.blocks.forEach(b => { if (b.image) b.image = 'KEEP_IMAGE'; });
     return `You are an expert digital product creator and editor. Improve the product below so it feels premium and worth paying for: specific, practical, well-structured, warm and confident. Keep the same JSON shape.
 
 RULES
@@ -400,6 +551,7 @@ ${blockDocs}
 - Text fields support **bold** and *italic*. In "text" and "intro", a blank line starts a new paragraph.
 - Themes: ${Object.keys(Folio.themes).join(', ')}. Covers: ${Object.keys(Folio.coverStyles).join(', ')}. Paper: ${Object.keys(Folio.paperSizes).join(', ')}.
 - No placeholder text (no "lorem ipsum", "TODO", "Your Name" unless I left it).
+- Leave "KEEP_IMAGE" values exactly as they are. Keep {{platform}}, {{brand}}, {{login}}, {{website}}, {{email}}, {{phone}} placeholders; they are filled in from the brand kit.
 
 MY REQUEST
 [Describe what you want changed, e.g. "Add two more chapters with worksheets" or "Rewrite in a friendlier voice".]
@@ -442,7 +594,13 @@ ${JSON.stringify(clean, null, 2)}`;
       const unknown = obj.blocks.filter(b => !Folio.blocks[b.type]).length;
       if (asNew) { addProject(obj); }
       else {
-        const backup = JSON.parse(JSON.stringify(P()));
+        const old = P();
+        obj.blocks.forEach(b => {
+          if (b.image === 'KEEP_IMAGE') { const o = old.blocks.find(x => x.id === b.id); b.image = o ? o.image : ''; }
+        });
+        if (!('brandId' in obj)) obj.brandId = old.brandId;
+        checkpoint(true);
+        const backup = JSON.parse(JSON.stringify(old));
         backup.id = uid(); backup.title = `${backup.title} (before AI edit)`;
         state.store.projects[backup.id] = backup;
         const keepId = P().id;
@@ -502,15 +660,32 @@ ${JSON.stringify(clean, null, 2)}`;
     const stored = readStore();
     if (stored) {
       state.store = stored;
+      stored.brands = stored.brands || {};
       Object.keys(stored.projects).forEach(k => { stored.projects[k] = normalize(stored.projects[k]); });
     } else {
       const first = normalize(JSON.parse(JSON.stringify(Folio.templates[0].product)));
-      state.store = { projects: { [first.id]: first }, current: first.id };
+      state.store = { projects: { [first.id]: first }, brands: {}, current: first.id };
     }
+    Folio.brands = state.store.brands;
+    /* Starter brand kits are always available. */
+    ['integrity', 'viralize'].forEach(ensureBrand);
 
     document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { state.tab = t.dataset.tab; renderPanel(); }));
     $('#panelBody').addEventListener('input', onPanelInput);
-    $('#panelBody').addEventListener('change', e => { if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') onPanelInput(e); });
+    $('#panelBody').addEventListener('change', e => {
+      if (e.target.type === 'file' && e.target.dataset.kind === 'image') return onImageFile(e.target);
+      if (e.target.id === 'brandPick') { checkpoint(true); P().brandId = e.target.value; save(); renderPanel(); renderPreview(); return; }
+      if (e.target.tagName === 'SELECT' || e.target.type === 'checkbox') onPanelInput(e);
+    });
+    $('#btnUndo').addEventListener('click', () => travel(state.undo, state.redo));
+    $('#btnRedo').addEventListener('click', () => travel(state.redo, state.undo));
+    document.addEventListener('keydown', e => {
+      const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName);
+      if (typing || !(e.metaKey || e.ctrlKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); travel(state.undo, state.redo); }
+      if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); travel(state.redo, state.undo); }
+    });
     $('#panelBody').addEventListener('click', onPanelClick);
     $('#btnNew').addEventListener('click', newModal);
     $('#btnProjects').addEventListener('click', projectsModal);
@@ -523,9 +698,10 @@ ${JSON.stringify(clean, null, 2)}`;
 
     /* Click a block in the preview to edit it */
     $('#stage').addEventListener('click', e => {
+      if (e.target.closest('a')) e.preventDefault();
       const blk = e.target.closest('[data-id]');
       if (!blk || !blk.dataset.id) return;
-      state.tab = 'content'; state.openBlocks.add(blk.dataset.id);
+      state.tab = 'content'; state.openBlocks.add(blk.dataset.id); state.lastBid = blk.dataset.id;
       renderPanel(); setMobile('edit');
       const card = document.querySelector(`[data-bid="${blk.dataset.id}"]`);
       if (card) { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); const f = card.querySelector('input,textarea'); if (f) f.focus({ preventScroll: true }); }

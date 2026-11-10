@@ -39,6 +39,8 @@ what you get from "Download .json backup".
 | `paper` | `letter`, `a4` |
 | `accent` | hex color like `#8C3B1F`, or `""` for the theme default |
 | `toc` | `true` / `false` (contents page appears when there are 2+ chapters) |
+| `brandId` | id of a saved brand kit, or `""` for none |
+| `watermark` | text stamped across inside pages (e.g. `SAMPLE`), or `""` |
 
 ## Block types
 
@@ -61,6 +63,15 @@ what you get from "Download .json backup".
 | `patterns` | `title`, `items[]` (hammer, shootingstar, doji, bullishengulfing, bearishengulfing, morningstar, eveningstar, threesoldiers, bullflag, doublebottom) | flows |
 | `risk` | `title`, `account`, `riskPct`, `entry` (numbers), `stops[]` (dollar stop distances) | flows |
 | `journal` | `title`, `columns[]`, `rows` (number) | full page |
+
+| `steps` | `title`, `path` ("Settings > Business Profile"), `items[]`, `result` | flows |
+| `screenshot` | `image` (data URL), `caption`, `markers[]` ("x% y% \| label") | flows |
+| `faq` | `title`, `items[]` ("Question \| Answer") | flows |
+| `video` | `title`, `url`, `note`, `length` (shows a QR code) | flows |
+| `cta` | `title`, `text`, `button`, `url` | flows |
+
+Placeholders `{{platform}}`, `{{brand}}`, `{{login}}`, `{{website}}`, `{{email}}`, `{{phone}}`
+work in any text and are filled from the product's brand kit.
 
 For `candles` with your own data, set `source` to `custom` and give one candle per line in `data`,
 e.g. `"101.2 103.5 100.8 103.1"`.

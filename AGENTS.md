@@ -14,7 +14,7 @@ sees real pages on the right, and exports a print-ready PDF.
    The app must keep working by double-clicking `index.html`.
 2. **No ES modules** (`import`/`export`). Files are loaded with `<script>` tags in
    `index.html` and share one global namespace: `window.Folio`.
-3. **Keep the load order** in `index.html`: themes → blocks → templates → render → quality → trading → app.
+3. **Keep the load order** in `index.html`: qrcode library (CDN) → themes → brands → blocks → templates → render → quality → trading → training → app.
 4. **Return whole files** when you change a file, unless the user asks for a diff.
 5. Don't break saved projects. If you rename a field, handle the old name in
    `normalize()` in `js/app.js`.
@@ -25,6 +25,9 @@ sees real pages on the right, and exports a print-ready PDF.
 | --- | --- | --- |
 | `index.html` | Page shell, Google Fonts link, script tags | add a font, add a top-bar button |
 | `js/themes.js` | `Folio.themes`, cover styles, paper sizes | add a visual theme or paper size |
+| `js/brands.js` | White-label brand kits, brand fonts, `{{token}}` placeholders | add a starter brand, a brand font or a new placeholder |
+| `js/training.js` | Software/CRM training blocks: steps, screenshot, faq, video (QR), cta | change how-to guides and training pages |
+| `assets/brands/` | Logo files for starter brands | add a brand logo |
 | `js/blocks.js` | `Folio.blocks` registry + text helpers | add a new kind of content (e.g. "recipe card") |
 | `js/templates.js` | Starter products in the "New" dialog | add a ready-made product |
 | `js/render.js` | Turns a product into pages | change page-splitting, cover or contents page |
@@ -75,6 +78,17 @@ and `text` (2–3 sentence explanation). Charts are SVG, so they stay sharp in P
 Any product using trading blocks must include a disclaimer that it is educational,
 not financial advice, and that trading carries risk of loss. The quality check enforces this.
 Never write content promising guaranteed or specific returns.
+
+### White-label brands and placeholders
+Brand kits live in the browser store (`store.brands`); starters are in `Folio.brandPresets`.
+A product links to one with `brandId`. Text can use `{{platform}}`, `{{brand}}`, `{{login}}`,
+`{{website}}`, `{{email}}`, `{{phone}}`; `Folio.applyTokens()` fills them in at render time.
+When writing CRM/software training content, use `{{platform}}` instead of a product name
+so the guide can be re-branded. Menu paths go in the `steps` block's `path` field, separated by `>`.
+
+### Images
+Uploaded images are stored inside the product as data URLs (shrunk on upload). The AI-edit
+prompt replaces them with `KEEP_IMAGE`; keep that value as-is and the app restores the image.
 
 ## Quality bar for content
 
