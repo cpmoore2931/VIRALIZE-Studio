@@ -6,7 +6,7 @@
  *   POST { mode: 'listing', product, keywords }           → { listing, cost } Etsy title, 13 tags, description, Pinterest copy
  *
  * The app runs one outline call, then every chapter at the same time, so a whole product
- * takes about 30 seconds and costs about 6¢. Blocks are checked against an allow-list here;
+ * takes about 30 seconds and costs about 10¢. Blocks are checked against an allow-list here;
  * the app checks them again against its own block registry.
  */
 const { guard, readBody, claude, parseJson } = require('./_treg');

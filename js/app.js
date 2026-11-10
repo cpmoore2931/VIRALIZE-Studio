@@ -930,7 +930,7 @@ ${esc(pinCopy(p).text)}</pre>
       return o;
     });
   }
-  /* Plan once, then write every chapter at the same time. About 6¢ and 30–60 seconds. */
+  /* Plan once, then write every chapter at the same time. About 10¢ and 30–60 seconds. */
   async function writeProduct(idea, n, status) {
     const call = body => api('api/write', { method: 'POST', body });
     const retry = body => call(body).catch(e => (e.status === 401 || e.status === 402 || e.status === 0 || e.status === 503) ? Promise.reject(e) : wait(1500).then(() => call(body)));
@@ -970,7 +970,7 @@ ${esc(pinCopy(p).text)}</pre>
   function writeBox(prefill) {
     return `<section class="research ai-write" id="aiWrite">
         <div><h3 class="research-title">Write it for me</h3>
-        <p class="hint">Describe the product. AI plans it and writes every chapter with real worksheets, ready for you to edit. About 6¢, under a minute.${researchMatch(prefill || '', 'buyers') ? ' It will use the buyer pain points from your research.' : ''}</p></div>
+        <p class="hint">Describe the product. AI plans it and writes every chapter with real worksheets, ready for you to edit. About 10¢, under a minute.${researchMatch(prefill || '', 'buyers') ? ' It will use the buyer pain points from your research.' : ''}</p></div>
         <form class="research-form" id="writeForm">
           <input type="search" id="writeIdea" placeholder="e.g. ADHD budget planner for busy moms" aria-label="Product idea" maxlength="120" autocomplete="off" value="${esc(prefill || '')}">
           <select id="writeLen" aria-label="Length"><option value="3">Short · 3 chapters</option><option value="4" selected>Standard · 4</option><option value="6">Deep · 6</option></select>

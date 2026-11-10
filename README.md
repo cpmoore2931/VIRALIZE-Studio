@@ -32,7 +32,7 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
   videos from a mockup (~$0.18) and narrated audio editions of chapters ($1 per 10k characters)
 - **TikTok trends**: this week's rising hashtags by industry, one click to research any of them
 - **Write it for me** (New dialog): describe a product and AI plans it, then writes every chapter with
-  worksheets at the same time (~6¢, under a minute). Uses the buyer pain points from your research
+  worksheets at the same time (~10¢, under a minute). Uses the buyer pain points from your research
 - **What buyers say** (Trends): Reddit posts and TikTok videos about an idea, summarized into pain
   points, wishes, video hooks and product angles (~1.5¢)
 - **Etsy listing kit** (Sell tab): a 140-character title, 13 tags and a price check from your research,
