@@ -345,7 +345,8 @@
           <button type="button" class="btn small" id="copyListing">Copy</button></div>
         <pre class="listing" id="listingOut">${esc(listingText(p))}</pre>
         <p class="hint">Paste into Gumroad, Etsy, Payhip, Stan or your own site. Updates as you edit.</p>
-      </section>`;
+      </section>
+      ${mediaSections(p)}`;
   }
 
   function qualityTab() {
@@ -364,6 +365,8 @@
   /* ---------- panel events ---------- */
   function onPanelInput(e) {
     const el = e.target;
+    const mediaKeys = { mockStyle: 'style', mockNotes: 'notes', audioChapter: 'chapter', audioSpeed: 'speed' };
+    if (mediaKeys[el.id]) { state.media[mediaKeys[el.id]] = el.value; if (el.id === 'audioChapter') renderPanel(); return; }
     if (!el.dataset.path || el.type === 'file') return;
     const kind = el.dataset.kind;
     checkpoint();
@@ -442,6 +445,16 @@
       return;
     }
     if (e.target.id === 'copyListing') { copy(listingText(p), 'Listing copied'); return; }
+    if (e.target.id === 'makeMockup') { makeMockup(); return; }
+    if (e.target.id === 'makeAudio') { makeAudio(); return; }
+    if (e.target.id === 'savePass') { store.set(PASS_KEY, $('#passSet').value.trim()); toast('Passcode saved on this device'); renderPanel(); return; }
+    const mv = e.target.closest('[data-mk-video]');
+    if (mv) { const m = (p.mockups || []).find(x => x.id === mv.dataset.mkVideo); if (m) makeVideo(m); return; }
+    const del = e.target.closest('[data-mk-del],[data-vid-del],[data-aud-del]');
+    if (del) {
+      const [key, id] = del.dataset.mkDel ? ['mockups', del.dataset.mkDel] : del.dataset.vidDel ? ['videos', del.dataset.vidDel] : ['audio', del.dataset.audDel];
+      p[key] = (p[key] || []).filter(x => x.id !== id); save(); renderPanel(); return;
+    }
 
     const actBtn = e.target.closest('[data-act]');
     const card = e.target.closest('.bcard');
@@ -509,6 +522,204 @@
     toast(rename ? `Started "${rename}" from the ${t.product.kind} starter. Tailor the pages to fit.` : 'New product created');
   }
 
+  /* ---------- media: mockups, promo videos, audio (server: api/*.js → Treg) ---------- */
+  state.jobs = [];
+  state.media = { style: 'desk', notes: '', chapter: 0, speed: '1' };
+  const MOCK_STYLES = {
+    desk: 'on a styled wooden desk with a coffee cup, a pen and a small plant, soft daylight',
+    cozy: 'on a cozy bed with white linen, a mug of tea and a knit blanket, warm morning light',
+    flatlay: 'top-down flat lay on white marble with gold clips, a pen and fresh flowers',
+    ipad: 'shown on an iPad screen with an Apple Pencil, next to a printed copy, on a bright minimalist desk',
+    wall: 'framed and hanging on a light wall in a styled living room, above a linen sofa',
+    cards: 'as a printed card deck in a small box with cards fanned out on linen',
+    kitchen: 'on a bright kitchen counter with fresh ingredients and a linen towel',
+    office: 'on a modern office desk next to a laptop with a dashboard on screen, a phone and a coffee'
+  };
+  const MOCK_LABELS = { desk: 'Styled desk', cozy: 'Cozy bed', flatlay: 'Marble flat lay', ipad: 'iPad + print', wall: 'Framed on a wall', cards: 'Card deck', kitchen: 'Kitchen counter', office: 'Office + laptop' };
+  const INSIDE = {
+    weekly: 'a weekly planner spread', monthly: 'a monthly calendar page', yearly: 'a year-at-a-glance calendar', habit: 'a habit tracker grid',
+    adhdday: 'a daily planner page with a highlighted top-priority box', checklist: 'checklists with tick boxes', prompts: 'journaling prompts with writing lines',
+    table: 'neat tables', candles: 'candlestick charts', patterns: 'candlestick pattern cards', mealplan: 'a weekly meal plan grid', recipe: 'recipe cards',
+    cards: 'printable cards', savings: 'a savings challenge grid', journal: 'a log table', steps: 'step-by-step instructions', screenshot: 'annotated screenshots',
+    coloring: 'detailed coloring pages', wallart: 'a typographic art print', floral: 'floral art prints', paper: 'patterned paper sheets', labels: 'printed labels'
+  };
+
+  function mockupPrompt(p, style, notes) {
+    const t = Folio.applyTokens(p);
+    const th = Folio.themes[p.theme] || Folio.themes.editorial;
+    const brand = Folio.brandOf(p);
+    const accent = p.accent || (brand && brand.primary) || th.accent;
+    const coverBg = brand && brand.dark && p.cover === 'full' ? brand.dark : th.coverBg;
+    const accentFor = String(accent).toLowerCase() === String(coverBg).toLowerCase() ? (th.coverInk || th.paper) : accent;
+    const kinds = [...new Set((p.blocks || []).map(b => INSIDE[b.type]).filter(Boolean))].slice(0, 3);
+    const printable = p.showCover === false;
+    const subject = printable
+      ? `a printable ${t.kind || 'digital product'} called "${t.title}", showing ${kinds.join(', ') || 'its pages'} in ${accent} and ${th.paper} tones`
+      : `a printed ${t.kind || 'book'} titled "${t.title}". The cover is professionally designed: background color ${coverBg}, accents in ${accentFor}, a tasteful illustration that fits the topic, and the title "${t.title}" in clear, well-designed typography${t.subtitle ? ` with a small subtitle line` : ''}${brand && brand.name ? ` and the brand name "${brand.name}"` : ''}. Beside it, the product lies open showing ${kinds.join(', ') || 'its inside pages'}`;
+    return `Photorealistic Etsy best-seller product photo of ${subject}. Scene: ${MOCK_STYLES[style] || MOCK_STYLES.desk}. ${notes ? notes.trim().replace(/\.?$/, '.') + ' ' : ''}Commercial product photography, rich detail, sharp focus on the product, all visible text spelled exactly as written, no watermark, no other text, no logos.`;
+  }
+
+  function chapterTexts(p) {
+    const t = Folio.applyTokens(p);
+    const clean = s => String(s || '').replace(/\*\*?|__/g, '').replace(/\s+/g, ' ').trim();
+    const out = [];
+    let cur = null;
+    (t.blocks || []).forEach(b => {
+      if (b.type === 'chapter') { cur = { title: clean(b.title), parts: [clean(b.title) + '.', clean(b.intro)] }; out.push(cur); return; }
+      if (!cur) { cur = { title: clean(t.title), parts: [clean(t.title) + '.'] }; out.push(cur); }
+      const L = v => list(v).map(clean);
+      if (b.type === 'paragraph') cur.parts.push(clean(b.text));
+      else if (b.type === 'heading') cur.parts.push(clean(b.text) + '.');
+      else if (b.type === 'bullets' || b.type === 'checklist') { if (b.title) cur.parts.push(clean(b.title) + '.'); cur.parts.push(L(b.items).join('. ') + '.'); }
+      else if (b.type === 'callout') cur.parts.push(`${clean(b.label)}: ${clean(b.text)}`);
+      else if (b.type === 'quote') cur.parts.push(`"${clean(b.text)}"${b.cite ? ` ${clean(b.cite)}.` : ''}`);
+      else if (b.type === 'prompts') { cur.parts.push(clean(b.title) + '.'); cur.parts.push(L(b.items).join(' ')); }
+      else if (b.type === 'steps') { cur.parts.push(`How to ${clean(b.title)}.`); cur.parts.push(L(b.items).map((s, i) => `Step ${i + 1}: ${s}`).join(' ')); }
+      else if (b.type === 'faq') L(b.items).forEach(l => { const [q, a] = l.split('|'); cur.parts.push(`${clean(q)} ${clean(a)}`); });
+    });
+    return out.map(c => ({ title: c.title, text: c.parts.filter(Boolean).join('\n\n') })).filter(c => c.text.length > 40);
+  }
+
+  function mediaError(err) {
+    if (err.status === 0) return 'Photos, videos and audio run on your live site (studio.tryviralize.com).';
+    if (err.status === 401) return 'Enter your passcode under "Research and media settings" below.';
+    if (err.status === 503 || err.status === 404) return 'One-time setup needed: add TREG_TOKEN and APP_PASSCODE in Vercel, then redeploy. Open Trends for step-by-step help.';
+    if (err.status === 402) return 'Your Treg balance is empty. Top up at treg.to.';
+    return err.message || 'That did not work. Try again in a moment.';
+  }
+  async function api(path, opts = {}) {
+    if (location.protocol === 'file:') throw Object.assign(new Error('offline'), { status: 0 });
+    const res = await fetch(path, {
+      method: opts.method || 'GET',
+      headers: Object.assign({ 'X-App-Passcode': store.get(PASS_KEY, '') }, opts.body ? { 'Content-Type': 'application/json' } : {}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.message || `Error ${res.status}`), { status: res.status, data });
+    return data;
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  async function pollUntilDone(path, id, every = 5000, tries = 72) {
+    for (let i = 0; i < tries; i++) {
+      await wait(every);
+      const s = await api(`${path}?id=${encodeURIComponent(id)}`);
+      if (s.status === 'done' && s.url) return s.url;
+      if (s.status === 'failed') throw new Error(s.error ? String(s.error).slice(0, 160) : 'The generator could not finish this one.');
+    }
+    throw new Error('This is taking longer than usual. Try again in a few minutes.');
+  }
+  const proxied = (url, download) => `api/mockup?img=${encodeURIComponent(url)}&k=${encodeURIComponent(store.get(PASS_KEY, ''))}${download ? `&download=${encodeURIComponent(download)}` : ''}`;
+  function thumbOf(url) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); const k = 480 / img.width;
+        c.width = 480; c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        try { resolve(c.toDataURL('image/jpeg', 0.82)); } catch (e) { resolve(''); }
+      };
+      img.onerror = () => resolve('');
+      img.src = proxied(url);
+    });
+  }
+  function startJob(kind, label) { const j = { kind, label, id: uid(), at: Date.now() }; state.jobs.push(j); if (state.tab === 'sell') renderPanel(); return j; }
+  function endJob(j, msg) { state.jobs = state.jobs.filter(x => x !== j); if (msg) toast(msg); if (state.tab === 'sell') renderPanel(); }
+
+  async function makeMockup() {
+    const pid = state.store.current;
+    const p = P();
+    const prompt = mockupPrompt(p, state.media.style, state.media.notes);
+    const job = startJob('mockup', `${MOCK_LABELS[state.media.style] || 'Photo'} photo`);
+    try {
+      const { id } = await api('api/mockup', { method: 'POST', body: { prompt } });
+      const url = await pollUntilDone('api/mockup', id);
+      const thumb = await thumbOf(url);
+      const prod = state.store.projects[pid];
+      prod.mockups = [{ id: uid(), src: url, thumb, style: state.media.style, at: Date.now() }, ...(prod.mockups || [])].slice(0, 8);
+      save();
+      endJob(job, 'Mockup photo ready');
+    } catch (err) { endJob(job, mediaError(err)); }
+  }
+
+  async function makeVideo(m) {
+    const pid = state.store.current;
+    if (Date.now() - m.at > 6.5 * 864e5) { toast('That photo link has expired. Make a fresh mockup first.'); return; }
+    const job = startJob('video', 'Promo video');
+    try {
+      const { id } = await api('api/video', { method: 'POST', body: { image: m.src, prompt: 'Slow, steady camera push-in toward the product cover, keeping the cover centered and fully in frame the whole time. Soft natural light, subtle gentle movement in the background only. Keep all text unchanged and legible.' } });
+      const url = await pollUntilDone('api/video', id, 5000, 90);
+      const prod = state.store.projects[pid];
+      prod.videos = [{ id: uid(), url, thumb: m.thumb, at: Date.now() }, ...(prod.videos || [])].slice(0, 6);
+      save();
+      endJob(job, 'Promo video ready. Download it within an hour.');
+    } catch (err) { endJob(job, mediaError(err)); }
+  }
+
+  async function makeAudio() {
+    const pid = state.store.current;
+    const ch = chapterTexts(P())[Number(state.media.chapter) || 0];
+    if (!ch) { toast('Add some text to narrate first.'); return; }
+    const job = startJob('audio', `Audio: ${ch.title}`);
+    try {
+      const r = await api('api/audio', { method: 'POST', body: { text: ch.text, speed: Number(state.media.speed) || 1 } });
+      const prod = state.store.projects[pid];
+      prod.audio = [{ id: uid(), title: ch.title, url: r.url, chars: r.chars, at: Date.now() }, ...(prod.audio || [])].slice(0, 12);
+      save();
+      endJob(job, 'Narration ready. Download it within 24 hours.');
+    } catch (err) { endJob(job, mediaError(err)); }
+  }
+
+  function mediaSections(p) {
+    const ago = t => { const h = (Date.now() - t) / 36e5; return h < 1 ? 'just now' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)} days ago`; };
+    const jobs = kind => state.jobs.filter(j => j.kind === kind).map(j => `<div class="media-job"><span class="spinner" aria-hidden="true"></span>${esc(j.label)}… <small>started ${ago(j.at)}</small></div>`).join('');
+    const chapters = chapterTexts(p);
+    const ci = Math.min(Number(state.media.chapter) || 0, Math.max(chapters.length - 1, 0));
+    const est = chapters[ci] ? Math.max(0.01, chapters[ci].text.length / 10000) : 0;
+    const fileName = slug(Folio.applyTokens(p).title);
+    return `
+      <section class="group media">
+        <div class="group-head"><h3 class="group-title">Product photos</h3><span class="hint">about $0.03 each</span></div>
+        <p class="hint">A listing-ready mockup of this product with its real title and colors.</p>
+        <div class="row2">
+          <label class="field" for="mockStyle"><span>Scene</span><select id="mockStyle">${Object.entries(MOCK_LABELS).map(([k, l]) => `<option value="${k}"${k === state.media.style ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="field" for="mockNotes"><span>Extra details (optional)</span><input type="text" id="mockNotes" value="${esc(state.media.notes)}" placeholder="e.g. pink peonies, autumn mood"></label>
+        </div>
+        <button type="button" class="btn primary" id="makeMockup">Make a mockup photo</button>
+        ${jobs('mockup')}
+        ${(p.mockups || []).length ? `<div class="mock-grid">${p.mockups.map(m => `<figure class="mock">
+          ${m.thumb ? `<img src="${esc(m.thumb)}" alt="Mockup photo">` : '<span class="mock-empty">Preview unavailable</span>'}
+          <figcaption><small>${esc(MOCK_LABELS[m.style] || '')} · ${ago(m.at)}</small>
+            <span class="mock-acts">${Date.now() - m.at < 6.5 * 864e5 ? `<a class="btn small" href="${esc(proxied(m.src, fileName))}" download>Download full size</a><button type="button" class="btn small" data-mk-video="${esc(m.id)}">Make video (~$0.18)</button>` : '<small>Full-size link expired</small>'}
+            <button type="button" class="btn ghost small danger" data-mk-del="${esc(m.id)}">Remove</button></span></figcaption></figure>`).join('')}</div>
+          <p class="hint">Full-size downloads stay available for 7 days after each photo is made.</p>` : ''}
+      </section>
+      <section class="group media">
+        <div class="group-head"><h3 class="group-title">Promo videos</h3><span class="hint">about $0.18 each, 5 s vertical</span></div>
+        <p class="hint">For TikTok, Reels and Pins. Use "Make video" on any photo above.</p>
+        ${jobs('video')}
+        ${(p.videos || []).map(v => `<div class="vid">${Date.now() - v.at < 55 * 6e4 ? `<video src="${esc(v.url)}" controls playsinline muted loop poster="${esc(v.thumb || '')}"></video>
+          <span><a class="btn small" href="${esc(v.url)}" target="_blank" rel="noopener">Open to save</a><small>Made ${ago(v.at)}. The link expires about an hour after it is made.</small></span>` : `<span class="hint">Video from ${ago(v.at)}: its link has expired.</span>`}
+          <button type="button" class="btn ghost small danger" data-vid-del="${esc(v.id)}">Remove</button></div>`).join('')}
+      </section>
+      <section class="group media">
+        <div class="group-head"><h3 class="group-title">Audio edition</h3><span class="hint">$1 per 10,000 characters</span></div>
+        <p class="hint">Narrate a chapter in a natural voice and sell it as a bonus audio version.</p>
+        ${chapters.length ? `<div class="row2">
+          <label class="field" for="audioChapter"><span>Chapter</span><select id="audioChapter">${chapters.map((c, i) => `<option value="${i}"${i === ci ? ' selected' : ''}>${esc(c.title)} (${c.text.length.toLocaleString()} chars)</option>`).join('')}</select></label>
+          <label class="field" for="audioSpeed"><span>Pace</span><select id="audioSpeed">${[['0.9', 'Relaxed'], ['1', 'Natural'], ['1.1', 'Brisk']].map(([v, l]) => `<option value="${v}"${v === state.media.speed ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        </div>
+        <button type="button" class="btn primary" id="makeAudio"${chapters[ci] && chapters[ci].text.length > 9500 ? ' disabled' : ''}>Narrate this chapter (about $${est.toFixed(2)})</button>
+        ${chapters[ci] && chapters[ci].text.length > 9500 ? '<p class="hint">This chapter is over the 9,500-character limit for one recording. Split it with another chapter block.</p>' : ''}` : '<p class="hint">Add chapters with text to create an audio edition.</p>'}
+        ${jobs('audio')}
+        ${(p.audio || []).map(a => `<div class="aud"><strong>${esc(a.title)}</strong>${Date.now() - a.at < 23 * 36e5 ? `<audio src="${esc(a.url)}" controls preload="none"></audio><a class="btn small" href="${esc(a.url)}" target="_blank" rel="noopener">Open to save</a>` : '<span class="hint">Link expired after 24 hours.</span>'}<button type="button" class="btn ghost small danger" data-aud-del="${esc(a.id)}">Remove</button></div>`).join('')}
+      </section>
+      <details class="group media-settings"${store.get(PASS_KEY, '') ? '' : ' open'}>
+        <summary class="group-title">Research and media settings</summary>
+        <p class="hint">Photos, videos, audio and research run through Treg on your server. Enter the APP_PASSCODE you set in Vercel.</p>
+        <div class="research-form"><input type="password" id="passSet" placeholder="Passcode" value="${esc(store.get(PASS_KEY, ''))}" autocomplete="current-password" aria-label="Passcode"><button type="button" class="btn" id="savePass">Save</button></div>
+      </details>`;
+  }
+
   /* ---------- live research (server: api/research.js → Treg) ---------- */
   const RESEARCH_KEY = 'folio.research';
   const PASS_KEY = 'folio.passcode';
@@ -559,7 +770,7 @@
       el.innerHTML = `
         <div class="research-head">
           <div><h3 class="research-title">Find a trending product</h3>
-          <p class="hint">Type any idea. Viralize checks Google demand and Etsy competition live through Treg (about 2¢ per search).</p></div>
+          <p class="hint">Type any idea. Viralize checks Google demand and Etsy competition plus Pinterest and Amazon, live through Treg (about 3¢ per search).</p></div>
         </div>
         <form class="research-form" id="researchForm">
           <input type="search" id="researchQ" placeholder="e.g. teacher planner, wedding seating chart, cozy coloring pages" aria-label="Product idea" maxlength="80" autocomplete="off">
@@ -591,6 +802,18 @@
             <div class="etsy-list">${e.listings.slice(0, 6).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener" class="etsy-item">${l.image ? `<img src="${esc(l.image)}" alt="" loading="lazy">` : '<span class="etsy-noimg"></span>'}<span><b>${esc(l.price || '')}</b>${l.bestseller ? ' <em>Bestseller</em>' : ''}<small>${esc(l.title || '')}</small></span></a>`).join('')}</div>
           </article>` : '<article class="tcard"><strong>Etsy</strong><p>No Etsy results came back for this search.</p></article>'}
         </div>
+        ${r.pinterest || r.amazon ? `<div class="research-grid">
+          ${r.pinterest && r.pinterest.count ? `<article class="tcard">
+            <div class="tcard-top"><strong>Pinterest</strong><span class="tpill ${r.pinterest.recent30 >= 6 ? 'tpill--rising' : 'tpill--season'}">${r.pinterest.recent30} new pins in 30 days</span></div>
+            <p>${r.pinterest.recent30 >= 6 ? 'Sellers are actively pinning this right now, so buyers are seeing it. Pin your mockups here.' : 'Few fresh pins: less competition for attention if you pin consistently.'}</p>
+            <div class="pin-strip">${r.pinterest.pins.slice(0, 8).map(pn => `<a href="${esc(pn.url)}" target="_blank" rel="noopener" title="${esc(pn.text)}">${pn.image ? `<img src="${esc(pn.image)}" alt="" loading="lazy">` : ''}</a>`).join('')}</div>
+          </article>` : ''}
+          ${r.amazon && r.amazon.count ? `<article class="tcard">
+            <div class="tcard-top"><strong>Amazon</strong><span class="tpill tpill--season">${fmtNum(r.amazon.total)} results</span></div>
+            <div class="etsy-stats"><div><b>${r.amazon.medianPrice ? '$' + r.amazon.medianPrice.toFixed(2) : '—'}</b><span>typical price</span></div><div><b>${r.amazon.selling}/${r.amazon.count}</b><span>show recent sales</span></div><div><b>${r.amazon.products[0] ? fmtNum(r.amazon.products[0].ratings) : '—'}</b><span>top ratings</span></div></div>
+            <div class="etsy-list">${r.amazon.products.slice(0, 4).map(a => `<a href="${esc(a.url)}" target="_blank" rel="noopener" class="etsy-item">${a.image ? `<img src="${esc(a.image)}" alt="" loading="lazy">` : '<span class="etsy-noimg"></span>'}<span><b>${esc(a.price || '')}</b>${a.sales ? ` <em>${esc(a.sales)}</em>` : ''}<small>${esc(a.title)}</small></span></a>`).join('')}</div>
+          </article>` : ''}
+        </div>` : ''}
         ${r.ideas.length ? `<h4 class="research-sub">Related ideas people search <span class="hint">(${r.ideas.length}${r.skipped ? `, ${r.skipped} store-brand or "free" searches hidden` : ''})</span></h4>
         <div class="trend-table"><table><thead><tr><th>Idea</th><th>Last 12 months</th><th class="num">Latest month</th><th class="num">3-mo change</th><th>Peak</th><th>Status</th><th>Why</th><th></th></tr></thead><tbody>
           ${r.ideas.map(i => `<tr><td><strong>${esc(i.kw)}</strong><small>${esc(i.comp)} competition${i.intent ? ` · ${esc(i.intent)}` : ''}</small></td><td>${sparkline(i.series)}</td>
@@ -654,6 +877,31 @@
     setTimeout(() => { const i = $('#researchQ', el); if (i) i.focus(); }, 60);
   }
 
+  /* TikTok trending hashtags this week (api/social.js). Cached for 12 hours. */
+  function initTikTok(el) {
+    const KEY = 'folio.tiktok';
+    const draw = (data, note) => {
+      const fresh = data && Date.now() - Date.parse(data.at) < 12 * 36e5;
+      el.innerHTML = `<div class="group-head"><h3 class="group-title">Trending on TikTok this week (US)</h3>
+          <button type="button" class="btn small" id="ttGo">${data ? (fresh ? 'Refresh' : 'Update') : 'Check TikTok'} <span class="hint">~1¢</span></button></div>
+        ${note ? `<p class="hint">${esc(note)}</p>` : ''}
+        ${data ? `<div class="tt-grid">${data.boards.filter(b => b.tags.length).map(b => `<div class="tt-board"><strong>${esc(b.label)}</strong>
+          ${b.tags.map(t => `<div class="tt-tag"><span>#${esc(t.tag)}</span>${sparkline(t.curve.length > 1 ? t.curve : [0, 0], 70, 22)}<small>${fmtNum(t.views)} views · ${fmtNum(t.posts)} posts</small><button type="button" class="linkbtn" data-research="${esc(t.tag.replace(/([a-z])([A-Z])/g, '$1 $2'))}">Research</button></div>`).join('')}</div>`).join('')}</div>
+          <p class="hint">Updated ${esc(new Date(data.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}. Use these as hooks and hashtags for your product videos.</p>`
+        : '<p class="hint">See the hashtags rising this week in education, home, health, beauty and parenting. Use them in captions and to spot product ideas.</p>'}`;
+    };
+    draw(store.get(KEY, null));
+    el.addEventListener('click', async e => {
+      if (e.target.closest('#ttGo')) {
+        e.target.closest('#ttGo').disabled = true;
+        try { const d = await api('api/social'); store.set(KEY, d); draw(d); } catch (err) { draw(store.get(KEY, null), mediaError(err)); }
+        return;
+      }
+      const r = e.target.closest('[data-research]');
+      if (r) { const q = $('#researchQ'); if (q) { q.value = r.dataset.research; $('#researchForm').requestSubmit(); $('#research').scrollIntoView({ behavior: 'smooth' }); } }
+    });
+  }
+
   function trendsModal() {
     const meta = (Folio.trends && Folio.trends.meta) || {};
     let filter = 'all', sort = 'score';
@@ -684,6 +932,7 @@
     };
     openModal('Market trends', `
       <section class="research" id="research"></section>
+      <section class="group tiktok" id="tiktok"></section>
       <h3 class="group-title snap-title">Trend snapshot</h3>
       <p class="hint trend-meta">${esc(meta.source || '')} ${meta.range ? `Data: ${esc(meta.range)}.` : ''} Snapshot taken ${esc(meta.updated || '')}.</p>
       <section class="group"><h3 class="group-title">Make these now</h3><div class="tcards">${pick.map(card).join('')}</div></section>
@@ -697,6 +946,7 @@
       body.closest('.modal').classList.add('modal--wide');
       draw(body);
       initResearch($('#research', body));
+      initTikTok($('#tiktok', body));
       body.addEventListener('click', e => {
         const f = e.target.closest('[data-tf]');
         if (f) { filter = f.dataset.tf; draw(body); return; }

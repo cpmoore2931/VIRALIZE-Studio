@@ -3,9 +3,11 @@
  *
  * POST { "q": "teacher planner" }  with header  X-App-Passcode: <APP_PASSCODE>
  *
- * Calls two Treg tools in parallel:
- *   dataforseo.google.keywords.ideas  related ideas + 12 months of US Google searches (~$0.015)
- *   crawl4ai.etsy.search.products     Etsy listings for the idea (~$0.0002)
+ * Calls four Treg tools in parallel (about 3¢ in total):
+ *   dataforseo.google.keywords.ideas      related ideas + 12 months of US Google searches (~$0.015)
+ *   crawl4ai.etsy.search.products         Etsy listings for the idea (~$0.0002)
+ *   scrapecreators.x.v1-pinterest-search  Pinterest pins for the idea (~$0.002)
+ *   treg.amazon.search.products           Amazon products, prices and "bought in past month" (~$0.015)
  * and returns one tidy JSON answer for the Trends view.
  *
  * Settings (Vercel → Project → Settings → Environment Variables):
@@ -14,29 +16,12 @@
  *
  * No npm packages: uses the global fetch in Vercel's Node runtime.
  */
-const TREG = 'https://treg.to/call/';
+const { treg: tregCall, guard, readBody } = require('./_treg');
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /* Searches by people who won't buy a digital product from you. */
 const SKIP = /\b(near me|nearby|walmart|target|amazon|aldi|costco|staples|barnes|dollar tree|michaels|reddit|free|word|excel|app|apps)\b/i;
-
-async function treg(id, body, token) {
-  const r = await fetch(TREG + id, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Treg-Token': token },
-    body: JSON.stringify(body)
-  });
-  const text = await r.text();
-  let json = null;
-  try { json = JSON.parse(text); } catch (e) { /* non-JSON error page */ }
-  const cost = Number(r.headers.get('x-treg-cost-micro') || 0) / 1e6;
-  if (!r.ok) {
-    const msg = (json && (json.detail || json.error || json.message)) || text.slice(0, 200);
-    const err = new Error(`${id}: ${r.status} ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
-    err.status = r.status;
-    throw err;
-  }
-  return { json, cost };
-}
+const treg = (id, body) => tregCall(id, { body });
+const tregGet = (id, query) => tregCall(id, { query });
 
 /* One keyword_data object from DataForSEO → a compact row. */
 function row(kd) {
@@ -122,6 +107,37 @@ function normalizeEtsy(body) {
   };
 }
 
+function normalizePins(body) {
+  const pins = (body && body.pins) || [];
+  const now = Date.now();
+  const recent = pins.filter(p => p.created_at && now - Date.parse(p.created_at) < 30 * 864e5).length;
+  return {
+    count: pins.length, recent30: recent,
+    pins: pins.slice(0, 10).map(p => {
+      const im = p.images || {};
+      return { url: p.url, image: (im['236x'] || im['170x'] || im['474x'] || {}).url || '', text: String(p.description || '').trim().slice(0, 140),
+        by: p.pinner ? (p.pinner.full_name || p.pinner.username || '') : '', followers: p.pinner ? p.pinner.follower_count || 0 : 0, created: p.created_at || '' };
+    })
+  };
+}
+
+function normalizeAmazon(body) {
+  const list = (body && body.output && body.output.products) || [];
+  const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null; };
+  const rows = list.map(p => ({
+    title: p.product_title || p.title || '', price: p.product_price || p.price || '', priceN: num(p.product_price || p.price),
+    rating: num(p.product_star_rating || p.rating), ratings: num(p.product_num_ratings || p.reviews) || 0,
+    sales: p.sales_volume || '', bestseller: !!(p.is_best_seller), url: p.product_url || p.link || '', image: p.product_photo || p.thumbnail || ''
+  })).filter(r => r.title);
+  const prices = rows.map(r => r.priceN).filter(n => n > 0).sort((a, b) => a - b);
+  const median = prices.length ? prices[Math.floor(prices.length / 2)] : null;
+  return {
+    count: rows.length, total: (body && body.output && body.output.count) || rows.length, medianPrice: median,
+    selling: rows.filter(r => /bought/i.test(r.sales)).length,
+    products: rows.slice().sort((a, b) => (b.sales ? 1 : 0) - (a.sales ? 1 : 0) || b.ratings - a.ratings).slice(0, 8)
+  };
+}
+
 function verdict(seed, etsy) {
   if (!seed) return 'Not enough Google data for this exact phrase. Try a broader idea.';
   let out = seed.latest >= 5000 ? 'Strong demand' : seed.latest >= 800 ? 'Solid demand' : 'Small niche';
@@ -137,34 +153,34 @@ function verdict(seed, etsy) {
 }
 
 async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  const token = process.env.TREG_TOKEN;
-  if (!token) return res.status(503).json({ error: 'setup', message: 'Add TREG_TOKEN in Vercel → Settings → Environment Variables, then redeploy.' });
-  const pass = process.env.APP_PASSCODE;
-  if (pass && req.headers['x-app-passcode'] !== pass) return res.status(401).json({ error: 'passcode', message: 'Wrong or missing passcode.' });
-
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
-  const q = String((body && body.q) || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (!guard(req, res)) return;
+  const body = readBody(req);
+  const q = String(body.q || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 80);
   if (q.length < 3) return res.status(400).json({ error: 'query', message: 'Type a product idea with at least 3 letters.' });
 
-  const [ideasR, etsyR] = await Promise.allSettled([
-    treg('dataforseo.google.keywords.ideas', [{ keyword: q, location_code: 2840, language_code: 'en', depth: 2, limit: 60, include_seed_keyword: true, ignore_synonyms: true }], token),
-    treg('crawl4ai.etsy.search.products', { query: q, limit: 48 }, token)
+  const [ideasR, etsyR, pinsR, amzR] = await Promise.allSettled([
+    treg('dataforseo.google.keywords.ideas', [{ keyword: q, location_code: 2840, language_code: 'en', depth: 2, limit: 60, include_seed_keyword: true, ignore_synonyms: true }]),
+    treg('crawl4ai.etsy.search.products', { query: q, limit: 48 }),
+    tregGet('scrapecreators.x.v1-pinterest-search', { query: q, trim: 'true' }),
+    treg('treg.amazon.search.products', { q, country: 'us' })
   ]);
-  if (ideasR.status === 'rejected' && etsyR.status === 'rejected') {
-    const st = ideasR.reason.status === 402 ? 402 : 502;
+  const all = [ideasR, etsyR, pinsR, amzR];
+  if (all.every(r => r.status === 'rejected')) {
+    const st = all.some(r => r.reason && r.reason.status === 402) ? 402 : 502;
     return res.status(st).json({ error: st === 402 ? 'balance' : 'upstream', message: st === 402 ? 'Your Treg balance is empty. Top up at treg.to.' : String(ideasR.reason.message) });
   }
-  const g = ideasR.status === 'fulfilled' ? normalizeIdeas(ideasR.value.json, q) : { seed: null, ideas: [], skipped: 0, alsoSearched: [] };
-  const etsy = etsyR.status === 'fulfilled' ? normalizeEtsy(etsyR.value.json) : null;
-  const cost = (ideasR.status === 'fulfilled' ? ideasR.value.cost : 0) + (etsyR.status === 'fulfilled' ? etsyR.value.cost : 0);
+  const ok = r => r.status === 'fulfilled';
+  const g = ok(ideasR) ? normalizeIdeas(ideasR.value.json, q) : { seed: null, ideas: [], skipped: 0, alsoSearched: [] };
+  const etsy = ok(etsyR) ? normalizeEtsy(etsyR.value.json) : null;
+  const pinterest = ok(pinsR) ? normalizePins(pinsR.value.json) : null;
+  const amazon = ok(amzR) ? normalizeAmazon(amzR.value.json) : null;
+  const cost = all.reduce((s, r) => s + (ok(r) ? r.value.cost : 0), 0);
+  const names = ['Google', 'Etsy', 'Pinterest', 'Amazon'];
   return res.status(200).json({
     q, at: new Date().toISOString(), seed: g.seed, ideas: g.ideas, skipped: g.skipped, alsoSearched: g.alsoSearched,
-    etsy, verdict: verdict(g.seed, etsy), cost: Math.round(cost * 10000) / 10000,
-    warnings: [ideasR.status === 'rejected' ? 'Google data unavailable: ' + ideasR.reason.message : null,
-      etsyR.status === 'rejected' ? 'Etsy data unavailable: ' + etsyR.reason.message : null].filter(Boolean)
+    etsy, pinterest, amazon, verdict: verdict(g.seed, etsy), cost: Math.round(cost * 10000) / 10000,
+    warnings: all.map((r, i) => (r.status === 'rejected' ? `${names[i]} data unavailable.` : null)).filter(Boolean)
   });
 }
 
@@ -172,3 +188,5 @@ module.exports = handler;
 module.exports.normalizeIdeas = normalizeIdeas;
 module.exports.normalizeEtsy = normalizeEtsy;
 module.exports.verdict = verdict;
+module.exports.normalizePins = normalizePins;
+module.exports.normalizeAmazon = normalizeAmazon;

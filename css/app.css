@@ -259,6 +259,37 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .snap-title { margin-top: 6px; }
+.pin-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pin-strip a { display: block; border-radius: 8px; overflow: hidden; background: var(--surface-2); aspect-ratio: 3 / 4; }
+.pin-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tiktok { padding: 16px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); }
+.tt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.tt-board { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.tt-tag { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; font-size: 13px; }
+.tt-tag span { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-tag small { color: var(--muted); font-size: 11.5px; }
+.tt-tag .linkbtn { font-size: 12px; justify-self: end; }
+.media .btn.primary { align-self: flex-start; }
+.media-job { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 13px; }
+.media-job small { color: var(--muted); }
+.mock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mock { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; }
+.mock img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.mock-empty { aspect-ratio: 3 / 4; display: grid; place-items: center; color: var(--muted); font-size: 12px; background: var(--surface-2); }
+.mock figcaption { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.mock figcaption small { color: var(--muted); }
+.mock-acts { display: flex; flex-wrap: wrap; gap: 4px; }
+.mock-acts .btn { text-decoration: none; }
+.vid { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: center; }
+.vid video { width: 120px; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; object-fit: cover; }
+.vid span { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.vid small { color: var(--muted); }
+.aud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.aud strong { width: 100%; font-size: 13px; }
+.aud audio { flex: 1; min-width: 180px; height: 36px; }
+.aud .btn, .vid .btn { text-decoration: none; }
+.media-settings summary { cursor: pointer; }
+.media-settings[open] summary { margin-bottom: 8px; }
 @media (max-width: 860px) { .research-grid, .etsy-list { grid-template-columns: 1fr; } }
 .tpl-cover { position: relative; }
 .tbadge { position: absolute; left: 8px; top: 8px; font: 600 11px/1 var(--ui); padding: 5px 8px; border-radius: 99px; background: rgba(255, 255, 255, .92); color: var(--good); box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }

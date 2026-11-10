@@ -28,6 +28,9 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
 - **Live product research**: type any idea in Trends and get Google demand (12 months), related
   ideas and Etsy competition through Treg (~2¢ per search). Needs `TREG_TOKEN` and `APP_PASSCODE`
   in Vercel → Settings → Environment Variables
+- **Media studio (Sell tab)**: one-click product mockup photos (~$0.03), 5-second vertical promo
+  videos from a mockup (~$0.18) and narrated audio editions of chapters ($1 per 10k characters)
+- **TikTok trends**: this week's rising hashtags by industry, one click to research any of them
 - **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)

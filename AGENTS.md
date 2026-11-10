@@ -31,7 +31,12 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/library.js` | Lifestyle pages: monthly, yearly, mealplan, cards, recipe, savings, wallart, paper, letterhead, labels | add or change calendars, cards, wall art, papers |
 | `js/art.js` | Generated vector art: floral prints, abstract collage, coloring pages (mandala, geometric, flowers), line icon set (`Folio.art.icons`) | add an icon, a palette or a new art generator |
 | `js/templates-library.js` | ~46 ready-to-sell starters with categories (planners, trackers, journals, money, art) | add a starter to the New dialog |
-| `api/research.js` | Vercel serverless function for live product research: calls Treg (Google keyword ideas + Etsy) with the server-side `TREG_TOKEN`; protected by `APP_PASSCODE` | change what live research returns |
+| `api/_treg.js` | Shared server helper: `treg(id, {body, query})` calls `https://treg.to/call/<id>` with `TREG_TOKEN`; `guard()` checks `APP_PASSCODE` | change how the server talks to Treg |
+| `api/research.js` | Live product research: Google keyword ideas (12-month history), Etsy, Pinterest and Amazon in one call (~3¢) | change what research returns |
+| `api/social.js` | TikTok trending hashtags this week by industry (~1¢) | change TikTok boards |
+| `api/mockup.js` | Product mockup photos (Nano Banana Pro, ~$0.03): start, poll, same-origin image proxy | change photo generation |
+| `api/video.js` | 5-second vertical promo video from a mockup (Seedance Lite, ~$0.18) | change video generation |
+| `api/audio.js` | Chapter narration MP3 (MiniMax Speech HD, $1 per 10k characters) | change audio |
 | `js/trends.js` | Market data snapshot (Google search demand + Etsy sample, pulled with Treg) for the Trends view and Trending starters | refresh trend data |
 | `assets/covers/` | Product photos shown on starter cards in New (set `image` on a template) | add a starter's cover photo |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
@@ -107,7 +112,7 @@ examples, short confident sentences, a clear promise, and something the buyer
 *does* (checklists, worksheets, planners), not just reads.
 
 ### Live research (server)
-`api/research.js` is the only server code. It runs on Vercel (no npm packages, global `fetch`).
+Server code lives in `api/` and runs on Vercel (no npm packages, global `fetch`). Files starting with `_` are helpers, not routes.
 Never move the Treg token into browser code. Env vars: `TREG_TOKEN` (Treg API key) and
 `APP_PASSCODE` (phrase the app asks for once). The browser calls `POST api/research {q}` with
 header `X-App-Passcode` and caches results in localStorage (`folio.research`) so reopening is free.
