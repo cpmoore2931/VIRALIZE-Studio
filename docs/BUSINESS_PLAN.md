@@ -55,7 +55,14 @@ EverBee ~$30/mo. Bundling creation + research + mockups is the pitch.
 
 ## Risks to check before launching
 
-- **Name**: search the USPTO trademark database for "Viralize" in software/classes 9 and 42.
+- **Name**: "VIRALIZE" is registered to **Antithica LLC** (San Antonio, TX): USPTO serial
+  99209525, Reg. No. 8141746, registered Feb 17, 2026, **Class 35** (marketing/advertising services).
+  Two follow-ups for selling the app itself:
+  1. Software is usually **Class 9** (downloadable software) and **Class 42** (software as a service).
+     Consider filing VIRALIZE (or "VIRALIZE STUDIO") in those classes too.
+  2. A separate VIRALIZE registration exists, Reg. No. 5409705, owned by Viralize SRL (Italy), covering
+     Classes 9, 35 and 42. Check its current status on USPTO TSDR and ask a trademark attorney whether
+     it affects a software product.
 - **AI image rights**: confirm the image model's terms allow commercial use of outputs and
   that generated covers do not copy real brands or artists.
 - **Fonts and libraries**: current fonts are Google Fonts (open licenses) — fine to use commercially.
