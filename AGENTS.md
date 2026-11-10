@@ -31,6 +31,7 @@ sees real pages on the right, and exports a print-ready PDF.
 | `js/library.js` | Lifestyle pages: monthly, yearly, mealplan, cards, recipe, savings, wallart, paper, letterhead, labels | add or change calendars, cards, wall art, papers |
 | `js/art.js` | Generated vector art: floral prints, abstract collage, coloring pages (mandala, geometric, flowers), line icon set (`Folio.art.icons`) | add an icon, a palette or a new art generator |
 | `js/templates-library.js` | ~46 ready-to-sell starters with categories (planners, trackers, journals, money, art) | add a starter to the New dialog |
+| `api/research.js` | Vercel serverless function for live product research: calls Treg (Google keyword ideas + Etsy) with the server-side `TREG_TOKEN`; protected by `APP_PASSCODE` | change what live research returns |
 | `js/trends.js` | Market data snapshot (Google search demand + Etsy sample, pulled with Treg) for the Trends view and Trending starters | refresh trend data |
 | `assets/covers/` | Product photos shown on starter cards in New (set `image` on a template) | add a starter's cover photo |
 | `assets/brands/` | Logo files for starter brands | add a brand logo |
@@ -104,6 +105,13 @@ prompt replaces them with `KEEP_IMAGE`; keep that value as-is and the app restor
 Products made here are sold, so content must feel premium: specific numbers and
 examples, short confident sentences, a clear promise, and something the buyer
 *does* (checklists, worksheets, planners), not just reads.
+
+### Live research (server)
+`api/research.js` is the only server code. It runs on Vercel (no npm packages, global `fetch`).
+Never move the Treg token into browser code. Env vars: `TREG_TOKEN` (Treg API key) and
+`APP_PASSCODE` (phrase the app asks for once). The browser calls `POST api/research {q}` with
+header `X-App-Passcode` and caches results in localStorage (`folio.research`) so reopening is free.
+Opening `index.html` from disk shows the snapshot only; live search needs the deployed site.
 
 ## Testing your change
 

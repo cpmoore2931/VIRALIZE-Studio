@@ -509,6 +509,151 @@
     toast(rename ? `Started "${rename}" from the ${t.product.kind} starter. Tailor the pages to fit.` : 'New product created');
   }
 
+  /* ---------- live research (server: api/research.js → Treg) ---------- */
+  const RESEARCH_KEY = 'folio.research';
+  const PASS_KEY = 'folio.passcode';
+  const store = {
+    get(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } }
+  };
+  /* Closest starter for an idea: the most shared meaningful words. */
+  function closestStarter(idea) {
+    const text = String(idea).toLowerCase();
+    /* 1. Known trends already link to the right starter. */
+    const known = TRENDS.filter(x => text.includes(x.kw) || x.kw.includes(text)).sort((a, b) => b.kw.length - a.kw.length)[0];
+    const knownKey = known && (known.template || known.near);
+    if (knownKey) return Folio.templates.find(t => t.key === knownKey);
+    /* 2. Topic words that point at a starter. */
+    const TOPICS = [[/teacher|lesson|homeschool|school|student|exam|revision|college|class/, 'study'], [/wedding|bridal|bride|engagement/, 'bride'],
+      [/budget|money|debt|finance|cash|savings?|expense/, 'budget'], [/meal|recipe|grocery|food|kitchen|pantry/, 'mealprep'], [/clean|chore|tidy|declutter/, 'cleaning'],
+      [/workout|fitness|gym|exercise|step/, 'fitness'], [/adhd|daily|to.?do|productiv/, 'adhdplanner'], [/business|client|crm|small biz|etsy seller|content/, 'work'],
+      [/trading|stock|crypto|forex/, 'trading'], [/journal|gratitude|reflection|self.?care|mindful/, 'wellness'], [/wall art|poster|print\b|prints\b/, 'minimalart'],
+      [/coloring|colouring/, 'coloring'], [/sticker|icon|highlight/, 'iconpack'], [/label/, 'labels'], [/travel|trip|vacation|packing/, 'project'], [/goal|vision|manifest/, 'goals']];
+    const topic = TOPICS.find(([re]) => re.test(text));
+    if (topic) return Folio.templates.find(t => t.key === topic[1]);
+    /* 3. Fall back to shared words. */
+    const stop = new Set(['for', 'and', 'the', 'with', 'printable', 'template', 'pdf', 'digital', 'a', 'of', 'to', 'my', 'best', 'cute', 'simple']);
+    const words = String(idea).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !stop.has(w));
+    let best = null, bestScore = 0;
+    Folio.templates.forEach(t => {
+      if (t.key === 'blank') return;
+      const hay = `${t.key} ${t.product.kind} ${t.product.title} ${t.blurb}`.toLowerCase();
+      const s = words.reduce((n, w) => n + (hay.includes(w) ? (String(t.product.kind).toLowerCase().includes(w) ? 2 : 1) : 0), 0);
+      if (s > bestScore) { bestScore = s; best = t; }
+    });
+    return best;
+  }
+  const titleCase = s => String(s).replace(/\b[a-z]/g, c => c.toUpperCase());
+  function makeButtons(kw) {
+    const t = closestStarter(kw);
+    return `<button type="button" class="btn small primary" data-make="${t ? esc(t.key) : 'blank'}" data-rename="${esc(titleCase(kw))}">${t ? `Make with ${esc(t.product.kind)}` : 'Start blank'}</button>`;
+  }
+
+  function initResearch(el) {
+    let current = null;
+    const history = () => store.get(RESEARCH_KEY, []);
+    const remember = r => { const h = history().filter(x => x.q !== r.q); h.unshift(r); store.set(RESEARCH_KEY, h.slice(0, 20)); };
+
+    const shell = () => {
+      const h = history();
+      el.innerHTML = `
+        <div class="research-head">
+          <div><h3 class="research-title">Find a trending product</h3>
+          <p class="hint">Type any idea. Viralize checks Google demand and Etsy competition live through Treg (about 2¢ per search).</p></div>
+        </div>
+        <form class="research-form" id="researchForm">
+          <input type="search" id="researchQ" placeholder="e.g. teacher planner, wedding seating chart, cozy coloring pages" aria-label="Product idea" maxlength="80" autocomplete="off">
+          <button type="submit" class="btn primary" id="researchGo">Research</button>
+        </form>
+        ${h.length ? `<div class="chips research-recent"><span class="hint">Recent:</span>${h.map(x => `<button type="button" class="chip" data-recent="${esc(x.q)}">${esc(x.q)}</button>`).join('')}</div>` : ''}
+        <div id="researchOut"></div>`;
+    };
+    const out = html => { $('#researchOut', el).innerHTML = html; };
+
+    const renderResult = r => {
+      current = r;
+      const s = r.seed;
+      const e = r.etsy;
+      const when = new Date(r.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      out(`
+        <div class="verdict"><strong>${esc(titleCase(r.q))}</strong><span>${esc(r.verdict)}</span></div>
+        <div class="research-grid">
+          ${s ? `<article class="tcard">
+            <div class="tcard-top"><strong>Google demand (US)</strong><span class="tpill tpill--${s.status}">${STATUS[s.status] || 'Steady'}</span></div>
+            ${sparkline(s.series, 260, 54)}
+            <div class="tcard-nums"><span><b>${fmtNum(s.latest)}</b> searches in ${esc(s.latestMonth)}</span><span class="${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '+' : ''}${s.change}% in 3 mo</span></div>
+            <p>${esc(s.why)} Peak month: ${esc(s.peak)}. Ads competition: ${esc(s.comp)}.</p>
+            ${makeButtons(r.q)}
+          </article>` : `<article class="tcard"><strong>Google demand</strong><p>No Google data for this exact phrase. Try a broader idea.</p>${makeButtons(r.q)}</article>`}
+          ${e && e.count ? `<article class="tcard etsy-card">
+            <div class="tcard-top"><strong>Etsy right now</strong><span class="tpill ${e.bestsellers <= 2 ? 'tpill--rising' : e.bestsellers >= 6 ? 'tpill--cooling' : 'tpill--season'}">${e.bestsellers <= 2 ? 'Open' : e.bestsellers >= 6 ? 'Crowded' : 'Competitive'}</span></div>
+            <div class="etsy-stats"><div><b>${e.medianPrice ? '$' + e.medianPrice.toFixed(2) : '—'}</b><span>typical price</span></div><div><b>${e.bestsellers}/${e.count}</b><span>Bestsellers</span></div><div><b>${fmtNum(e.medianReviews)}</b><span>median reviews</span></div></div>
+            <div class="etsy-list">${e.listings.slice(0, 6).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener" class="etsy-item">${l.image ? `<img src="${esc(l.image)}" alt="" loading="lazy">` : '<span class="etsy-noimg"></span>'}<span><b>${esc(l.price || '')}</b>${l.bestseller ? ' <em>Bestseller</em>' : ''}<small>${esc(l.title || '')}</small></span></a>`).join('')}</div>
+          </article>` : '<article class="tcard"><strong>Etsy</strong><p>No Etsy results came back for this search.</p></article>'}
+        </div>
+        ${r.ideas.length ? `<h4 class="research-sub">Related ideas people search <span class="hint">(${r.ideas.length}${r.skipped ? `, ${r.skipped} store-brand or "free" searches hidden` : ''})</span></h4>
+        <div class="trend-table"><table><thead><tr><th>Idea</th><th>Last 12 months</th><th class="num">Latest month</th><th class="num">3-mo change</th><th>Peak</th><th>Status</th><th>Why</th><th></th></tr></thead><tbody>
+          ${r.ideas.map(i => `<tr><td><strong>${esc(i.kw)}</strong><small>${esc(i.comp)} competition${i.intent ? ` · ${esc(i.intent)}` : ''}</small></td><td>${sparkline(i.series)}</td>
+            <td class="num">${fmtNum(i.latest)}</td><td class="num ${i.change >= 0 ? 'up' : 'down'}">${i.change >= 0 ? '+' : ''}${i.change}%</td><td>${esc(i.peak)}</td>
+            <td><span class="tpill tpill--${i.status}">${STATUS[i.status] || 'Steady'}</span></td><td class="why">${esc(i.why)}</td>
+            <td class="acts"><button type="button" class="btn small" data-research="${esc(i.kw)}">Research</button>${makeButtons(i.kw)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}
+        ${r.alsoSearched && r.alsoSearched.length ? `<div class="chips research-also"><span class="hint">Also searched:</span>${r.alsoSearched.map(k => `<button type="button" class="chip" data-research="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
+        <p class="hint research-foot">Checked ${esc(when)}${r.cost ? ` · cost $${r.cost.toFixed(3)}` : ''}${r.cached ? ' · saved result, no charge' : ''} · <button type="button" class="linkbtn" data-refresh="${esc(r.q)}">Refresh live</button>${r.warnings && r.warnings.length ? ` · ${esc(r.warnings.join(' '))}` : ''}</p>`);
+    };
+
+    const ask = (title, body) => out(`<div class="research-note"><strong>${title}</strong>${body}</div>`);
+
+    async function run(q, force) {
+      q = String(q || '').trim().toLowerCase();
+      if (q.length < 3) { ask('Type a little more', '<p>Use at least 3 letters, like "habit tracker".</p>'); return; }
+      $('#researchQ', el).value = q;
+      const saved = history().find(x => x.q === q);
+      if (saved && !force) { renderResult(Object.assign({}, saved, { cached: true })); return; }
+      if (location.protocol === 'file:') {
+        ask('Research runs on your live site', '<p>Open <b>studio.tryviralize.com</b> to search live. The trend snapshot below works everywhere.</p>');
+        return;
+      }
+      out('<div class="research-loading"><span class="spinner" aria-hidden="true"></span>Checking Google and Etsy through Treg…</div>');
+      $('#researchGo', el).disabled = true;
+      try {
+        const res = await fetch('api/research', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Passcode': store.get(PASS_KEY, '') }, body: JSON.stringify({ q }) });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          ask('Enter your research passcode', `<p>This keeps strangers from spending your Treg balance. Use the APP_PASSCODE you set in Vercel.</p>
+            <form class="research-form" id="passForm"><input type="password" id="passIn" placeholder="Passcode" autocomplete="current-password" aria-label="Passcode"><button class="btn primary" type="submit">Save and search</button></form>`);
+          $('#passForm', el).addEventListener('submit', ev => { ev.preventDefault(); store.set(PASS_KEY, $('#passIn', el).value); run(q, true); });
+          setTimeout(() => { const p = $('#passIn', el); if (p) p.focus(); }, 30);
+        } else if (res.status === 503 || res.status === 404) {
+          ask('One-time setup needed', `<ol class="steps"><li>In your <b>Treg</b> dashboard (treg.to), create an API key.</li>
+            <li>In <b>Vercel</b>, open the project, go to Settings, then Environment Variables. Add <code>TREG_TOKEN</code> with that key, and <code>APP_PASSCODE</code> with any phrase you choose.</li>
+            <li>Redeploy (Deployments, then the ⋯ menu, then Redeploy) and search again.</li></ol>`);
+        } else if (res.status === 402) {
+          ask('Treg balance is empty', '<p>Top up at treg.to, then search again.</p>');
+        } else if (!res.ok) {
+          ask('That search did not go through', `<p>${esc(data.message || `Error ${res.status}`)}. Try again in a moment.</p>`);
+        } else {
+          remember(data); shell(); $('#researchQ', el).value = q; bind(); renderResult(data);
+        }
+      } catch (err) {
+        ask('Could not reach the research server', '<p>Check your internet connection and try again.</p>');
+      } finally {
+        const b = $('#researchGo', el); if (b) b.disabled = false;
+      }
+    }
+
+    function bind() {
+      $('#researchForm', el).addEventListener('submit', ev => { ev.preventDefault(); run($('#researchQ', el).value); });
+    }
+    el.addEventListener('click', ev => {
+      const r = ev.target.closest('[data-research]'); if (r) { run(r.dataset.research); el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+      const rc = ev.target.closest('[data-recent]'); if (rc) { run(rc.dataset.recent); return; }
+      const rf = ev.target.closest('[data-refresh]'); if (rf) { run(rf.dataset.refresh, true); return; }
+    });
+    shell(); bind();
+    setTimeout(() => { const i = $('#researchQ', el); if (i) i.focus(); }, 60);
+  }
+
   function trendsModal() {
     const meta = (Folio.trends && Folio.trends.meta) || {};
     let filter = 'all', sort = 'score';
@@ -538,6 +683,8 @@
       body.querySelectorAll('[data-tf]').forEach(b => b.classList.toggle('on', b.dataset.tf === filter));
     };
     openModal('Market trends', `
+      <section class="research" id="research"></section>
+      <h3 class="group-title snap-title">Trend snapshot</h3>
       <p class="hint trend-meta">${esc(meta.source || '')} ${meta.range ? `Data: ${esc(meta.range)}.` : ''} Snapshot taken ${esc(meta.updated || '')}.</p>
       <section class="group"><h3 class="group-title">Make these now</h3><div class="tcards">${pick.map(card).join('')}</div></section>
       <section class="group">
@@ -549,6 +696,7 @@
       </section>`, body => {
       body.closest('.modal').classList.add('modal--wide');
       draw(body);
+      initResearch($('#research', body));
       body.addEventListener('click', e => {
         const f = e.target.closest('[data-tf]');
         if (f) { filter = f.dataset.tf; draw(body); return; }

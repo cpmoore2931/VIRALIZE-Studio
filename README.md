@@ -25,6 +25,9 @@ export them as print-ready PDFs to sell on Gumroad, Etsy, Payhip, Stan or your o
   meal prep, recipe cards, budget and savings sheets, wall art, pattern and texture papers, stationery and labels
 - **Generated vector art**: floral prints, abstract collage art, coloring pages (mandalas, patterns,
   flowers) and a line icon pack for highlight covers and planner stickers. Change the design number for new variations
+- **Live product research**: type any idea in Trends and get Google demand (12 months), related
+  ideas and Etsy competition through Treg (~2¢ per search). Needs `TREG_TOKEN` and `APP_PASSCODE`
+  in Vercel → Settings → Environment Variables
 - **Undo / redo** (Ctrl/Cmd+Z), image uploads, sample watermark for free previews
 - **Live page preview** — click any block to edit it
 - **Export PDF** in US Letter or A4 with real, selectable text (crisp at any zoom)
