@@ -543,6 +543,60 @@ window.Folio = window.Folio || {};
     ['grain', '#B7A6EC', '#FAF8FF'], ['watercolor', '#F5A6CF', '#FFFDFD'], ['watercolor', '#9FBFF0', '#FDFEFF']
   ]);
 
+
+  /* ================= GENERATED ART ================= */
+  add('floralart', 'Art & paper', 'Botanical and bouquet prints, generated as crisp vector art.', {
+    kind: 'Floral Wall Art', title: 'In Bloom', subtitle: '', theme: 'editorial', showCover: false,
+    listing: L(7, 'flower lovers decorating bedrooms, nurseries and kitchens', 'Print-at-home botanical art in soft, frame-ready colors.'),
+    blocks: [
+      { type: 'floral', style: 'bouquet', palette: 'blush', seed: 7, text: 'Grow at your own pace' },
+      { type: 'floral', style: 'line', palette: 'sage', seed: 12, text: '' },
+      { type: 'floral', style: 'single', palette: 'terracotta', seed: 4, text: '' },
+      { type: 'floral', style: 'meadow', palette: 'pastel', seed: 21, text: 'Wildflowers' },
+      { type: 'floral', style: 'bouquet', palette: 'berry', seed: 33, text: '' },
+      { type: 'floral', style: 'line', palette: 'blush', seed: 5, text: 'Bloom', color: '#B4506E' }
+    ]
+  });
+
+  add('collageart', 'Art & paper', 'Abstract mid-century collage prints in curated palettes.', {
+    kind: 'Digital Collage Art', title: 'Shapes & Sun', subtitle: '', theme: 'editorial', showCover: false,
+    listing: L(7, 'modern home decorators who love bold, abstract shapes', 'Gallery-wall-ready abstract art you can print in any frame size.'),
+    blocks: [
+      { type: 'collage', palette: 'terracotta', seed: 3, word: '' },
+      { type: 'collage', palette: 'sage', seed: 11, word: 'slow' },
+      { type: 'collage', palette: 'pastel', seed: 8, word: '' },
+      { type: 'collage', palette: 'ocean', seed: 24, word: 'here' },
+      { type: 'collage', palette: 'berry', seed: 15, word: '' },
+      { type: 'collage', palette: 'blush', seed: 42, word: 'soft' }
+    ]
+  });
+
+  add('coloring', 'Art & paper', '12 coloring pages: mandalas, patterns and flowers.', {
+    kind: 'Coloring Pages', title: 'Color & Calm', subtitle: 'Twelve relaxing coloring pages for adults: mandalas, flowing patterns and flowers', theme: 'editorial', cover: 'classic',
+    listing: L(6, 'adults who color to relax and unwind', 'Twelve printable pages to slow down and switch off.'),
+    blocks: [
+      ...[1, 2, 3, 4, 5, 6].map(n => ({ type: 'coloring', design: 'mandala', seed: n * 7, caption: `Mandala ${n}` })),
+      ...[1, 2, 3].map(n => ({ type: 'coloring', design: 'geometric', seed: n * 5, caption: `Flow ${n}` })),
+      { type: 'coloring', design: 'flowers', seed: 7, caption: 'Bouquet' },
+      { type: 'coloring', design: 'flowers', seed: 19, caption: 'Bouquet' },
+      { type: 'coloring', design: 'meadow', seed: 21, caption: 'Meadow' }
+    ]
+  });
+
+  const lifeIcons = ['home | Home', 'heart | Love', 'star | Faves', 'coffee | Coffee', 'food | Food', 'plane | Travel', 'camera | Photos', 'music | Music', 'dumbbell | Fitness', 'book | Reading', 'plant | Plants', 'paw | Pets', 'bag | Shop', 'sparkle | Beauty', 'gift | Gifts', 'chat | Reviews', 'question | FAQ', 'mail | Contact', 'work | Work', 'idea | Tips'];
+  const plannerIcons = ['calendar | Appt', 'check | Done', 'bell | Reminder', 'clock | Due', 'cart | Groceries', 'money | Pay day', 'cake | Birthday', 'phone | Call', 'mail | Email', 'pin | Errand', 'dumbbell | Workout', 'leaf | Self care', 'sun | Day off', 'moon | Early night', 'plane | Trip', 'pen | Write', 'book | Study', 'user | Meeting', 'cloud | Rest', 'flower | Treat'];
+  add('iconpack', 'Art & paper', 'Line icon set as highlight covers and planner stickers.', {
+    kind: 'Icon Pack', title: 'Everyday Icons', subtitle: '', theme: 'blush', showCover: false,
+    listing: L(6, 'Instagram creators, small shops and digital planners', 'A matching icon set for highlight covers, planners and websites.'),
+    blocks: [
+      { type: 'icons', title: 'Highlight covers · Blush', items: lifeIcons, style: 'circle', cols: 4 },
+      { type: 'icons', title: 'Highlight covers · Neutral', items: lifeIcons, style: 'circle', color: '#5A4A3F', fill: '#EFE6DC', cols: 4 },
+      { type: 'icons', title: 'Highlight covers · Pastel', items: lifeIcons, style: 'circle', color: '#6B5BD6', fill: '#ECE8FF', cols: 4 },
+      { type: 'icons', title: 'Planner stickers', items: plannerIcons, style: 'sticker', cols: 5 },
+      { type: 'icons', title: 'Planner tiles', items: plannerIcons, style: 'tile', color: '#2F5D50', fill: '#E3EEE8', cols: 5 }
+    ]
+  });
+
   add('stationery', 'Art & paper', 'Letterheads, notepaper and thank-you cards.', {
     kind: 'Stationery Set', title: 'Paper Goods', subtitle: '', theme: 'editorial', showCover: false,
     listing: L(6, 'small businesses and people who still love writing letters', 'Personalize, print and write.'),

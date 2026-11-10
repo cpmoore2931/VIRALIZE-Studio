@@ -63,6 +63,16 @@ what you get from "Download .json backup".
 | `candles` | `title`, `source` (`sample_uptrend`, `sample_downtrend`, `sample_range`, `sample_breakout`, `custom`), `data[]` ("open high low close"), `levels[]` ("price \| label"), `ma` (number), `caption` | flows |
 | `patterns` | `title`, `items[]` (hammer, shootingstar, doji, bullishengulfing, bearishengulfing, morningstar, eveningstar, threesoldiers, bullflag, doublebottom) | flows |
 | `risk` | `title`, `account`, `riskPct`, `entry` (numbers), `stops[]` (dollar stop distances) | flows |
+| `floral` | `style` (`bouquet`, `line`, `single`, `meadow`), `palette`, `seed`, `text`, `color` | bare page |
+| `collage` | `palette`, `seed`, `word` | bare page |
+| `coloring` | `design` (`mandala`, `geometric`, `flowers`, `meadow`), `seed`, `caption` | bare page |
+| `icons` | `title`, `items[]` ("icon \| label"), `style` (`circle`, `tile`, `sticker`, `plain`), `color`, `fill`, `cols` | bare page |
+
+Art is generated from `seed`: the same number always draws the same picture; change it for a new one.
+Palettes: blush, sage, terracotta, pastel, berry, ocean. Icon names are listed in `js/art.js`.
+
+| type | fields | layout |
+| --- | --- | --- |
 | `journal` | `title`, `columns[]`, `rows` (number) | full page |
 
 | `steps` | `title`, `path` ("Settings > Business Profile"), `items[]`, `result` | flows |

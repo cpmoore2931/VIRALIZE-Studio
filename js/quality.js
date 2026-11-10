@@ -58,7 +58,7 @@ Folio.stats = function (p) {
     chapters: blocks.filter(b => b.type === 'chapter').length,
     pageBlocks: blocks.filter(b => Folio.blocks[b.type] && ['page', 'bare'].includes(Folio.blocks[b.type].layout)).length,
     printable: blocks.length > 0 && blocks.every(b => Folio.blocks[b.type] && Folio.blocks[b.type].layout === 'bare'),
-    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit', 'candles', 'patterns', 'risk', 'journal', 'steps', 'screenshot', 'faq', 'video', 'adhdday', 'monthly', 'yearly', 'mealplan', 'cards', 'recipe', 'savings'].includes(b.type)).length,
+    actionable: blocks.filter(b => ['checklist', 'prompts', 'table', 'weekly', 'habit', 'candles', 'patterns', 'risk', 'journal', 'steps', 'screenshot', 'faq', 'video', 'adhdday', 'monthly', 'yearly', 'mealplan', 'cards', 'recipe', 'savings', 'coloring'].includes(b.type)).length,
     emptyChapters,
     placeholder: placeholderRe.test(text) || placeholderRe.test(p.title || ''),
     pages: Folio.pageCount(p),

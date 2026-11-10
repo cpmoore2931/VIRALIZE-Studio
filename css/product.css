@@ -443,6 +443,28 @@
 .lbl--tag { aspect-ratio: 1.6 / 1; border-radius: 6px 30px 30px 6px; position: relative; }
 .lbl--tag::after { content: ''; position: absolute; right: 14px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; border: 1.5px solid var(--p-accent); }
 
+
+/* ---------- Generated art: floral, collage, coloring, icons ---------- */
+.genart { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: .7in; }
+.genart-frame { flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.gen-svg { width: 100%; height: 100%; display: block; }
+.genart--collage { padding: 0; }
+.genart--collage .gen-svg { width: 100%; height: 100%; }
+.genart--coloring { background: #fff; padding: .55in; }
+.genart-text { font: 400 22pt/1.2 'DM Serif Display', Georgia, serif; text-align: center; letter-spacing: .01em; }
+.genart-cap { font: 500 8pt/1 var(--p-body); letter-spacing: .24em; text-transform: uppercase; color: #777; }
+.iconset { height: 100%; padding: .7in; display: flex; flex-direction: column; gap: 26px; background: var(--p-paper); }
+.iconset-title { font: var(--p-display-weight, 600) 20pt/1.1 var(--p-display); text-align: center; color: var(--p-ink); }
+.iconset-grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 26px 18px; align-content: start; }
+.ic { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ic-badge { width: 100%; max-width: 1.35in; aspect-ratio: 1; display: grid; place-items: center; }
+.ic-badge svg { width: 46%; height: 46%; }
+.iconset--circle .ic-badge { border-radius: 50%; background: var(--if); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ic) 22%, transparent); }
+.iconset--tile .ic-badge { border-radius: 26%; background: var(--if); }
+.iconset--sticker .ic-badge { border-radius: 50%; background: #fff; box-shadow: 0 0 0 5px #fff, 0 0 0 6.5px color-mix(in srgb, var(--ic) 55%, transparent); }
+.iconset--plain .ic-badge svg { width: 62%; height: 62%; }
+.ic-label { font: 600 9pt/1.1 var(--p-body); color: var(--p-ink); text-align: center; }
+
 /* ---------- Print / PDF ---------- */
 @media print {
   @page { margin: 0; }
